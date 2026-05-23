@@ -17,11 +17,10 @@ pytest>=8.0.0
 matplotlib>=3.8.0
 numpy>=1.26.0
 
-# Later layers (commented out — install when needed)
-# openai>=1.50.0          # Layer 2: GPT-4o client
-# google-generativeai     # Layer 2: Gemini client
-# transformers>=4.40.0    # Layer 6: Qwen training loop
-# torch>=2.0.0            # Layer 6: REINFORCE
-# prometheus-client       # Layer 8: monitoring
-# rich                    # Layer 7: annotation CLI
-# click                   # Layer 7: annotation CLI
+# Optional: additional model providers (for multi-model experiments)
+# openai>=1.50.0
+# google-generativeai>=0.8.0
+
+# Optional: training loop (requires GPU)
+# transformers>=4.40.0
+# torch>=2.0.0
