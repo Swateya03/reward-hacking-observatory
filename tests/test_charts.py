@@ -239,13 +239,13 @@ class TestHackTypesChartData:
     """Test data preparation for hack_type_distribution chart."""
 
     def test_prepare_hack_types_returns_sorted_list(self):
-        """prepare_data returns list of (label, count) tuples."""
+        """prepare_data returns list of (label, count, enum_name) tuples."""
         data = prepare_hack_types_data(MOCK_FINDINGS)
 
         assert isinstance(data, list)
         assert len(data) > 0
         assert isinstance(data[0], tuple)
-        assert len(data[0]) == 2
+        assert len(data[0]) == 3
 
     def test_prepare_hack_types_sorted_descending(self):
         """List is sorted by count descending (most common first)."""
@@ -258,7 +258,7 @@ class TestHackTypesChartData:
         """Labels are human-readable (not enum names)."""
         data = prepare_hack_types_data(MOCK_FINDINGS)
 
-        labels = [label for label, _ in data]
+        labels = [label for label, _, _ in data]
 
         # Should not have underscores or all caps like enums
         for label in labels:
@@ -269,7 +269,7 @@ class TestHackTypesChartData:
         """Sycophantic Caution (16) is the top hack type."""
         data = prepare_hack_types_data(MOCK_FINDINGS)
 
-        top_label, top_count = data[0]
+        top_label, top_count, _ = data[0]
 
         assert "Sycophantic Caution" in top_label or "caution" in top_label.lower()
         assert top_count == 16
@@ -306,17 +306,17 @@ class TestScatterChartData:
         """Colors map correctly to ambiguity levels."""
         data = prepare_scatter_data(MOCK_TASKS)
 
-        # task_001 is low, should be green
+        # task_001 is low, should be GitHub green
         idx = data["task_ids"].index("task_001")
-        assert data["colors"][idx] == "#2ca02c"  # Green for low
+        assert data["colors"][idx] == "#3fb950"  # Green for low
 
-        # task_018 is medium, should be orange
+        # task_018 is medium, should be GitHub yellow
         idx = data["task_ids"].index("task_018")
-        assert data["colors"][idx] == "#ff7f0e"  # Orange for medium
+        assert data["colors"][idx] == "#d29922"  # Yellow for medium
 
-        # task_021 is high, should be red
+        # task_021 is high, should be GitHub red
         idx = data["task_ids"].index("task_021")
-        assert data["colors"][idx] == "#d62728"  # Red for high
+        assert data["colors"][idx] == "#f85149"  # Red for high
 
     def test_prepare_scatter_data_skips_none_scores(self):
         """Tasks with None scores are skipped."""
@@ -443,7 +443,7 @@ class TestChartDataEdgeCases:
         data = prepare_hack_types_data(MOCK_FINDINGS)
 
         # Find entries with count 0
-        zero_entries = [label for label, count in data if count == 0]
+        zero_entries = [label for label, count, _ in data if count == 0]
 
         # Should be at least one (Scope Creep, Irreversibility Bias)
         assert len(zero_entries) >= 0  # May or may not be included depending on implementation
