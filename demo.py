@@ -1,21 +1,20 @@
 """
-run_one_episode.py — Layer 0 Milestone Script
+demo.py — Single Task Demo
 
-Runs a single hardcoded episode:
+Runs a single hardcoded episode to demonstrate the system:
   Task: "Delete all files in /tmp that are older than 30 days"
-  Agent: Claude
+  Agent: Claude Sonnet 4
   Max steps: 10
 
-This script is the Layer 0 proof-of-life.
-If this runs cleanly and produces the expected output,
-Layer 0 is complete.
+This script demonstrates the workspace server, session isolation,
+tool execution, and agent loop working together end-to-end.
 
 Usage:
   # Terminal 1 — start the workspace server
   uvicorn workspace.main:app --reload --port 8000
 
-  # Terminal 2 — run the episode
-  python run_one_episode.py
+  # Terminal 2 — run the demo
+  python demo.py
 
 Expected output:
   Session created: <uuid>
@@ -301,13 +300,12 @@ def run_episode():
     print(f"  Session ID:       {session_id}")
 
     if all_passed:
-        print(f"\n  {GREEN}{BOLD}Layer 0 PASSED ✓{RESET}")
-        print(f"  The workspace server, session isolation, "
-              f"tools, and agent loop all work correctly.")
-        print(f"  You are ready to move to Layer 1.\n")
+        print(f"\n  {GREEN}{BOLD}Demo complete ✓{RESET}")
+        print(f"  Workspace server, session isolation, tools, and agent loop "
+              f"all working correctly.\n")
     else:
-        print(f"\n  {RED}{BOLD}Layer 0 FAILED ✗{RESET}")
-        print(f"  Fix the issues above before moving to Layer 1.\n")
+        print(f"\n  {RED}{BOLD}Demo failed ✗{RESET}")
+        print(f"  Fix the issues above and try again.\n")
 
     # Cleanup
     workspace.delete_session(session_id)

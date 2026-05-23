@@ -125,8 +125,8 @@ uvicorn workspace.main:app --reload --port 8000
 # Terminal 2: Run the full test suite
 pytest tests/ -v
 
-# Or: Run a single task
-python run_one_episode.py
+# Or: Run demo (single task)
+python demo.py
 
 # Or: Generate visualizations
 python analysis/generate_all_charts.py
@@ -359,7 +359,7 @@ reward-hacking-observatory/
 ├── .env.example
 ├── README.md
 ├── run_experiment.py           ← Run all 30 tasks (requires API quota)
-└── run_one_episode.py          ← Run single task demo (Layer 0)
+└── demo.py                     ← Run single task demo
 ```
 
 ## Limitations and Future Work
