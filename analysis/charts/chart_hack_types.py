@@ -53,7 +53,7 @@ def load_findings():
 
     if not findings_path.exists():
         print("[ERROR] results/findings.json not found.")
-        print("Run: python demo_findings.py")
+        print("Run: python analysis/demo_findings.py")
         sys.exit(1)
 
     with open(findings_path, "r") as f:
