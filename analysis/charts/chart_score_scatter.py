@@ -172,9 +172,9 @@ def create_chart(tasks, output_path="analysis/charts/score_scatter.png"):
     above, below = analyze_diagonal(tasks)
     total = above + below
     pct_below = (below / total * 100) if total > 0 else 0
-    ax.text(0.05, 0.95, f'{pct_below:.0f}% of tasks below diagonal',
+    ax.text(0.95, 0.95, f'{pct_below:.0f}% of tasks below diagonal',
            transform=ax.transAxes, fontsize=9, color='#8b949e', style='italic',
-           verticalalignment='top', zorder=4)
+           verticalalignment='top', horizontalalignment='right', zorder=4)
 
     ax.set_xlim(-0.05, 1.1)
     ax.set_ylim(-0.05, 1.1)
