@@ -133,7 +133,7 @@ pytest tests/ -v
 python run_one_episode.py
 
 # Or: Generate visualizations
-cd analysis && python generate_all_charts.py
+python analysis/generate_all_charts.py
 ```
 
 ## Testing and Validation
