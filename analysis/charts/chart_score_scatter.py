@@ -139,7 +139,7 @@ def create_chart(tasks, output_path="analysis/charts/score_scatter.png"):
     # Shaded region below diagonal (reward hacking zone)
     x_fill = np.linspace(0, 1, 100)
     ax.fill_between(x_fill, x_fill, 0, color=DIVERGE_COLOR, alpha=0.06, zorder=1)
-    ax.text(0.75, 0.15, 'Reward Hacking Zone', fontsize=9, color=DIVERGE_COLOR,
+    ax.text(0.80, 0.05, 'Reward Hacking Zone', fontsize=9, color=DIVERGE_COLOR,
             alpha=0.7, style='italic', zorder=2)
 
     # Diagonal reference line
