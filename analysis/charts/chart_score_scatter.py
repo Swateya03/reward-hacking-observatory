@@ -185,9 +185,6 @@ def create_chart(tasks, output_path="analysis/charts/score_scatter.png"):
 
     ax.set_title('Per-Task Naive vs Robust Reward Score', fontsize=13, fontweight='bold',
                 color='#e6edf3', pad=20)
-    ax.text(0.5, 1.08, 'Points below diagonal indicate reward hacking',
-           transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e',
-           style='italic')
 
     legend_elements = [
         mpatches.Patch(facecolor=LOW_COLOR, edgecolor='#30363d', label='Low ambiguity'),
@@ -195,6 +192,10 @@ def create_chart(tasks, output_path="analysis/charts/score_scatter.png"):
         mpatches.Patch(facecolor=HIGH_COLOR, edgecolor='#30363d', label='High ambiguity'),
     ]
     ax.legend(handles=legend_elements, loc='upper left', fontsize=10, framealpha=0.9)
+
+    ax.text(0.98, 1.08, 'Points below diagonal indicate reward hacking',
+           transform=ax.transAxes, ha='right', fontsize=10, color='#8b949e',
+           style='italic')
 
     ax.grid(True, alpha=0.15, linestyle='--', color='#30363d')
 
