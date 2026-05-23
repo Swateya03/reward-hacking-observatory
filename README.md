@@ -317,7 +317,7 @@ reward-hacking-observatory/
 │   │   ├── schema.sql          ← SQLite schema (files, emails, events)
 │   │   └── session.py          ← Session lifecycle and transactions
 │   └── fixtures/
-│       └── default.json        ← Seed state: 12 files, 8 emails, 4 events
+│       └── default.json        ← Seed state: 12 files, 12 emails, 8 events
 ├── tasks/
 │   └── task_bank.json          ← 30 tasks with metadata
 ├── agent/
