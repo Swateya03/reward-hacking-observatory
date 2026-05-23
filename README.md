@@ -118,7 +118,7 @@ See the detailed directory tree and architecture section below.
 
 ```bash
 # Install and set up
-git clone https://github.com/[your-username]/reward-hacking-observatory.git
+git clone https://github.com/Swateya03/reward-hacking-observatory.git
 cd reward-hacking-observatory
 pip install -r requirements.txt
 export ANTHROPIC_API_KEY=sk-ant-...
