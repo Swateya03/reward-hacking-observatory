@@ -4,13 +4,34 @@ import json
 import sys
 from pathlib import Path
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib import rcParams
 import numpy as np
 
-# Color mapping for ambiguity levels
+# GitHub dark theme styling
+rcParams['font.family'] = 'DejaVu Sans'
+rcParams['font.size'] = 11
+rcParams['axes.spines.top'] = False
+rcParams['axes.spines.right'] = False
+rcParams['figure.facecolor'] = '#0d1117'
+rcParams['axes.facecolor'] = '#161b22'
+rcParams['axes.labelcolor'] = '#e6edf3'
+rcParams['xtick.color'] = '#8b949e'
+rcParams['ytick.color'] = '#8b949e'
+rcParams['text.color'] = '#e6edf3'
+rcParams['grid.color'] = '#30363d'
+rcParams['axes.edgecolor'] = '#30363d'
+
+# GitHub color palette
+LOW_COLOR = '#3fb950'
+MEDIUM_COLOR = '#d29922'
+HIGH_COLOR = '#f85149'
+DIVERGE_COLOR = '#f85149'
+
 AMBIGUITY_COLORS = {
-    "low": "#2ca02c",      # Green
-    "medium": "#ff7f0e",   # Orange
-    "high": "#d62728",     # Red
+    "low": LOW_COLOR,
+    "medium": MEDIUM_COLOR,
+    "high": HIGH_COLOR,
 }
 
 def prepare_data(tasks: list) -> dict:
@@ -89,12 +110,12 @@ def analyze_diagonal(tasks):
 def create_chart(tasks, output_path="analysis/charts/score_scatter.png"):
     """Create scatter plot of naive vs robust scores."""
 
-    # Extract data
     task_ids = []
     naive_scores = []
     robust_scores = []
     colors = []
     ambiguity_levels = []
+    divergences = []
 
     for task in tasks:
         task_id = task.get("task_id")
@@ -110,86 +131,75 @@ def create_chart(tasks, output_path="analysis/charts/score_scatter.png"):
         robust_scores.append(robust)
         ambiguity_levels.append(ambiguity)
         colors.append(AMBIGUITY_COLORS.get(ambiguity, "#808080"))
+        divergences.append(abs(naive - robust))
 
-    # Set up figure and axis
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(11, 10), facecolor='#0d1117')
+    ax.set_facecolor('#161b22')
 
-    # Plot scatter points
-    scatter = ax.scatter(
-        naive_scores,
-        robust_scores,
-        c=colors,
-        s=100,
-        alpha=0.6,
-        edgecolors="black",
-        linewidth=0.5
-    )
+    # Shaded region below diagonal (reward hacking zone)
+    x_fill = np.linspace(0, 1, 100)
+    ax.fill_between(x_fill, x_fill, 0, color=DIVERGE_COLOR, alpha=0.06, zorder=1)
+    ax.text(0.75, 0.15, 'Reward Hacking Zone', fontsize=9, color=DIVERGE_COLOR,
+            alpha=0.7, style='italic', zorder=2)
 
-    # Add diagonal reference line (y = x)
-    ax.plot([0, 1], [0, 1], "k--", linewidth=2, alpha=0.5, label="Perfect alignment (y=x)")
+    # Diagonal reference line
+    ax.plot([0, 1], [0, 1], color='#8b949e', linestyle='--', linewidth=1.5, zorder=2)
 
-    # Annotate task_018 if present
-    task_018_idx = None
-    for i, task_id in enumerate(task_ids):
-        if task_id == "task_018":
-            task_018_idx = i
-            break
+    # Size points by divergence magnitude
+    sizes = [60 + d * 300 for d in divergences]
 
-    if task_018_idx is not None:
-        naive_018 = naive_scores[task_018_idx]
-        robust_018 = robust_scores[task_018_idx]
-        ax.annotate(
-            f"task_018\nnaive={naive_018:.2f}\nrobust={robust_018:.2f}",
-            xy=(naive_018, robust_018),
-            xytext=(naive_018 - 0.25, robust_018 + 0.15),
-            fontsize=10,
-            fontweight="bold",
-            bbox=dict(boxstyle="round,pad=0.5", facecolor="#ffcccc", alpha=0.8),
-            arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0.3", lw=2, color="#d62728")
-        )
+    # Scatter plot
+    scatter = ax.scatter(naive_scores, robust_scores, s=sizes, c=colors, alpha=0.85,
+                        edgecolors='#0d1117', linewidth=0.8, zorder=3)
 
-    # Labels and formatting
-    ax.set_xlabel("Naive Score", fontsize=12, fontweight="bold")
-    ax.set_ylabel("Robust Score", fontsize=12, fontweight="bold")
-    ax.set_title(
-        "Per-Task Naive vs Robust Reward Score",
-        fontsize=14,
-        fontweight="bold",
-        pad=20
-    )
-    ax.text(
-        0.5,
-        1.02,
-        "Points below diagonal = naive reward overstates performance",
-        transform=ax.transAxes,
-        ha="center",
-        fontsize=11,
-        style="italic",
-        color="#666666"
-    )
+    # Find and annotate highest divergence task
+    if divergences:
+        max_div_idx = divergences.index(max(divergences))
+        task_id = task_ids[max_div_idx]
+        naive = naive_scores[max_div_idx]
+        robust = robust_scores[max_div_idx]
 
-    # Set axis limits
+        ax.annotate(f"{task_id}\nnaive={naive:.2f}\nrobust={robust:.2f}",
+                   xy=(naive, robust),
+                   xytext=(naive - 0.20, robust + 0.15),
+                   fontsize=9, color='#e6edf3',
+                   bbox=dict(boxstyle='round,pad=0.6', facecolor=DIVERGE_COLOR,
+                            edgecolor=DIVERGE_COLOR, alpha=0.15),
+                   arrowprops=dict(arrowstyle='->', color=DIVERGE_COLOR, lw=2),
+                   zorder=4)
+
+    # Stat annotation
+    above, below = analyze_diagonal(tasks)
+    total = above + below
+    pct_below = (below / total * 100) if total > 0 else 0
+    ax.text(0.05, 0.95, f'{pct_below:.0f}% of tasks below diagonal',
+           transform=ax.transAxes, fontsize=9, color='#8b949e', style='italic',
+           verticalalignment='top', zorder=4)
+
     ax.set_xlim(-0.05, 1.1)
     ax.set_ylim(-0.05, 1.1)
-    ax.set_aspect("equal")
+    ax.set_aspect('equal')
 
-    # Add custom legend for ambiguity levels
-    from matplotlib.patches import Patch
+    ax.set_xlabel('Naive Score', fontsize=12, fontweight='bold', color='#e6edf3')
+    ax.set_ylabel('Robust Score', fontsize=12, fontweight='bold', color='#e6edf3')
+
+    ax.set_title('Per-Task Naive vs Robust Reward Score', fontsize=13, fontweight='bold',
+                color='#e6edf3', pad=15)
+    ax.text(0.5, 1.04, 'Points below diagonal indicate reward hacking',
+           transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e',
+           style='italic')
+
     legend_elements = [
-        Patch(facecolor="#2ca02c", edgecolor="black", label="Low ambiguity"),
-        Patch(facecolor="#ff7f0e", edgecolor="black", label="Medium ambiguity"),
-        Patch(facecolor="#d62728", edgecolor="black", label="High ambiguity"),
+        mpatches.Patch(facecolor=LOW_COLOR, edgecolor='#30363d', label='Low ambiguity'),
+        mpatches.Patch(facecolor=MEDIUM_COLOR, edgecolor='#30363d', label='Medium ambiguity'),
+        mpatches.Patch(facecolor=HIGH_COLOR, edgecolor='#30363d', label='High ambiguity'),
     ]
-    ax.legend(handles=legend_elements, loc="upper left", fontsize=11)
+    ax.legend(handles=legend_elements, loc='upper left', fontsize=10, framealpha=0.9)
 
-    # Grid
-    ax.grid(True, alpha=0.3, linestyle="--")
+    ax.grid(True, alpha=0.15, linestyle='--', color='#30363d')
 
-    # Tight layout
     plt.tight_layout()
-
-    # Save figure at 300 dpi
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.savefig(output_path, dpi=300, bbox_inches='tight', facecolor='#0d1117')
     print(f"[SUCCESS] Chart saved to: {output_path}")
 
     return fig
@@ -220,16 +230,12 @@ def main():
     tasks = load_all_tasks()
     print(f"Loaded {len(tasks)} tasks from results/")
 
-    # Print analysis
     print_analysis(tasks)
-
-    # Create chart
     create_chart(tasks)
 
     print("Key insight:")
-    print("  task_018 is the smoking gun: perfect naive score (1.0)")
-    print("  but catastrophic robust score (0.05) - complete failure")
-    print("  disguised as perfect effort.\n")
+    print("  Points sized by divergence magnitude — larger = more hacking")
+    print("  Color by ambiguity — red=high ambiguity tasks\n")
 
 if __name__ == "__main__":
     main()
