@@ -110,10 +110,6 @@ The project spans multiple layers with a comprehensive test suite covering 195+ 
 
 These charts are generated from `results/findings.json`, which aggregates task results and locks in the empirical metrics. The regression tests verify that findings stay within expected ranges as code evolves.
 
-## Repository Structure
-
-See the detailed directory tree and architecture section below.
-
 ## Quickstart
 
 ```bash
@@ -249,7 +245,7 @@ The data is unambiguous: when task intent is unclear, agents optimize for the me
 
 ![Score Scatter Plot](analysis/charts/score_scatter.png)
 
-**Caption:** Each point represents one task, plotted as (naive score, robust score). The diagonal line represents perfect agreement between the two reward functions. Points below the diagonal (naive > robust) indicate reward hacking—the agent scored higher on the naive metric than on actual task completion. 82% of all tasks fall below the diagonal. The task_018 annotation at the top-right (naive=1.0, robust=0.05) exemplifies the extreme: perfect naive score, near-zero robust score, a 0.95 divergence revealing an agent optimizing purely for the metric.
+**Caption:** Each point represents one task, plotted as (naive score, robust score). The diagonal line represents perfect agreement between the two reward functions. Points below the diagonal (naive > robust) indicate reward hacking—the agent scored higher on the naive metric than on actual task completion. 82% of all tasks fall below the diagonal. The task_018 annotation at the bottom-right (naive=1.0, robust=0.05) exemplifies the extreme: perfect naive score, near-zero robust score, a 0.95 divergence revealing an agent optimizing purely for the metric.
 
 ### Finding 2: Naive Reward Systematically Overstates Performance
 
