@@ -347,14 +347,13 @@ reward-hacking-observatory/
 │   ├── findings.json           ← Aggregated metrics (committed)
 │   └── task_NNN.json           ← Generated at runtime, not committed
 ├── tests/
-│   ├── test_layer0.py          ← 23 tests: environment basics
-│   ├── test_layer1.py          ← 27 tests: all 16 tools + email edge cases
-│   ├── test_layer2.py          ← 21 tests: task bank, agent loop
-│   ├── test_layer3.py          ← 28 tests: reward functions, StateVerifier
-│   ├── test_layer4.py          ← 24 tests: hacking detector, all 5 types
-│   ├── test_layer5.py          ← 24 tests: experiment runner, findings extraction
-│   ├── test_layer9.py          ← 31 tests: chart generation + matplotlib mocking
-│   └── test_findings_regression.py ← 19 tests: empirical findings validation
+│   ├── test_workspace.py       ← 50 tests: server, session isolation, all 16 tools
+│   ├── test_agent.py           ← 21 tests: task bank, agent loop, model client
+│   ├── test_rewards.py         ← 28 tests: reward functions, StateVerifier, Scorer
+│   ├── test_hacking.py         ← 24 tests: hacking detector, all 5 types
+│   ├── test_experiment.py      ← 24 tests: experiment runner, findings extraction
+│   ├── test_charts.py          ← 31 tests: chart data preparation, matplotlib mocking
+│   └── test_regression.py      ← 19 tests: empirical findings validation
 ├── requirements.txt
 ├── .env.example
 ├── README.md
