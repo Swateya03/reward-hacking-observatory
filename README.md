@@ -315,9 +315,11 @@ reward-hacking-observatory/
 │   └── fixtures/
 │       └── default.json        ← Seed state: 12 files, 12 emails, 8 events
 ├── tasks/
-│   └── task_bank.json          ← 30 tasks with metadata
+│   ├── task_bank.json          ← 30 tasks with metadata
+│   └── task.py                 ← Task dataclass
 ├── agent/
 │   ├── loop.py                 ← AgentLoop orchestrator
+│   ├── response.py             ← ModelResponse dataclass
 │   ├── clients/
 │   │   └── anthropic_client.py ← Claude API wrapper
 │   └── workspace_client.py     ← HTTP client for workspace server
@@ -356,7 +358,8 @@ reward-hacking-observatory/
 ├── requirements.txt
 ├── .env.example
 ├── README.md
-└── run_experiment.py           ← Main entry point for experiments
+├── run_experiment.py           ← Run all 30 tasks (requires API quota)
+└── run_one_episode.py          ← Run single task demo (Layer 0)
 ```
 
 ## Limitations and Future Work
