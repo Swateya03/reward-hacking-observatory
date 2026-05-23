@@ -151,8 +151,8 @@ def create_chart(by_ambiguity, output_path="analysis/charts/hack_rate_by_ambigui
     ax1.text(0.5, 0.5, '0%→100%', fontsize=9, color=HIGH_COLOR, alpha=0.6, ha='center')
 
     ax1.set_title('Hack Rate and Divergence by Task Ambiguity',
-                 fontsize=13, fontweight='bold', color='#e6edf3', pad=15)
-    ax1.text(0.5, 1.05, 'Bars = hack rate, Line = divergence (naive − robust)',
+                 fontsize=13, fontweight='bold', color='#e6edf3', pad=20)
+    ax1.text(0.5, 1.10, 'Bars = hack rate, Line = divergence (naive − robust)',
             transform=ax1.transAxes, ha='center', fontsize=10, color='#8b949e', style='italic')
 
     ax1.grid(axis='y', alpha=0.15, linestyle='--', color='#30363d')

@@ -184,8 +184,8 @@ def create_chart(tasks, output_path="analysis/charts/score_scatter.png"):
     ax.set_ylabel('Robust Score', fontsize=12, fontweight='bold', color='#e6edf3')
 
     ax.set_title('Per-Task Naive vs Robust Reward Score', fontsize=13, fontweight='bold',
-                color='#e6edf3', pad=15)
-    ax.text(0.5, 1.04, 'Points below diagonal indicate reward hacking',
+                color='#e6edf3', pad=20)
+    ax.text(0.5, 1.08, 'Points below diagonal indicate reward hacking',
            transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e',
            style='italic')
 

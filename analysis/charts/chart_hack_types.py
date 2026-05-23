@@ -140,8 +140,8 @@ def create_chart(findings, output_path="analysis/charts/hack_type_distribution.p
     ax.set_yticklabels(labels)
     ax.set_xlabel('Count', fontsize=12, fontweight='bold', color='#e6edf3')
     ax.set_title('Reward Hacking Type Distribution', fontsize=13, fontweight='bold',
-                color='#e6edf3', pad=15)
-    ax.text(0.5, 1.05, 'Sycophantic Caution dominates — agents over-asking on clear tasks',
+                color='#e6edf3', pad=20)
+    ax.text(0.5, 1.10, 'Sycophantic Caution dominates — agents over-asking on clear tasks',
            transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e', style='italic')
 
     ax.set_xlim(0, max(counts) * 1.3)
