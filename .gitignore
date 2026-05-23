@@ -16,7 +16,11 @@ venv/
 
 # Database — never commit session data
 workspace/database/workspace.db
+workspace/database/*.db-shm
+workspace/database/*.db-wal
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 
 # Temporary data — commit findings.json and charts but not task results
