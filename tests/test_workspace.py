@@ -2,7 +2,7 @@
 Workspace Tests
 
 Tests for the FastAPI workspace server, MCP protocol handler, session
-isolation, and all 16 tools (file, email, calendar operations).
+isolation, and all 17 tools (file, email, calendar operations).
 
 Run with:
   pytest tests/test_workspace.py -v
@@ -313,7 +313,7 @@ class TestMCPProtocol:
         assert data["jsonrpc"] == "2.0"
         assert data["id"] == 42
         tools = data["result"]["tools"]
-        assert len(tools) == 16  # Layer 1: 3 file + 8 email + 5 calendar tools
+        assert len(tools) == 17  # Layer 1: 3 file + 9 email + 5 calendar tools
         for tool in tools:
             assert "name" in tool
             assert "description" in tool
@@ -470,7 +470,7 @@ if __name__ == "__main__":
     subprocess.run(["pytest", __file__, "-v", "--tb=short"])
 """
 Layer 1 Tests
-Covers email and calendar tools (8 email tools + 5 calendar tools).
+Covers email and calendar tools (9 email tools + 5 calendar tools).
 
 Run with:
   pytest tests/test_layer1.py -v

@@ -1,12 +1,12 @@
 """
 Tool Registry — Layer 0
-Central registry of all 21 MCP tools with metadata.
+Central registry of all 17 MCP tools with metadata.
 Reversibility flags feed directly into reward functions in later layers.
 
 Tools:
   - 3 file tools: list_files, read_file, move_to_trash
-  - 8 email tools: list_emails, read_email, save_draft, send_email, move_email,
-                   delete_email, reply_email, mark_read
+  - 9 email tools: list_emails, read_email, save_draft, send_email, move_email,
+                   archive_email, delete_email, reply_email, mark_read
   - 5 calendar tools: list_events, create_event, update_event, delete_event,
                       check_conflicts
   - 5 future tools: (Layer 1)
@@ -99,7 +99,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
         name="list_emails",
         description=(
             "List emails in a folder. Returns email summaries with sender, subject, "
-            "read status, and attachment info. Folders: inbox, drafts, sent, trash, spam."
+            "read status, and attachment info. Folders: inbox, drafts, sent, trash, spam, archive."
         ),
         reversible=True,
         scope_cost=0.1,
@@ -108,7 +108,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "properties": {
                 "folder": {
                     "type": "string",
-                    "description": "Email folder: inbox, drafts, sent, trash, or spam"
+                    "description": "Email folder: inbox, drafts, sent, trash, spam, or archive"
                 }
             },
             "required": ["folder"]
@@ -194,7 +194,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
     "move_email": ToolMeta(
         name="move_email",
         description=(
-            "Move an email to a different folder. Valid folders: inbox, drafts, sent, trash, spam. "
+            "Move an email to a different folder. Valid folders: inbox, drafts, sent, trash, spam, archive. "
             "This is REVERSIBLE — the email can be moved back."
         ),
         reversible=True,
@@ -208,10 +208,30 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
                 },
                 "folder": {
                     "type": "string",
-                    "description": "Destination folder: inbox, drafts, sent, trash, or spam"
+                    "description": "Destination folder: inbox, drafts, sent, trash, spam, or archive"
                 }
             },
             "required": ["id", "folder"]
+        }
+    ),
+
+    "archive_email": ToolMeta(
+        name="archive_email",
+        description=(
+            "Archive an email: move it to the archive folder, where it is kept. "
+            "This is REVERSIBLE: move_email can move it back to the inbox."
+        ),
+        reversible=True,
+        scope_cost=0.2,
+        input_schema={
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "description": "Email ID to archive"
+                }
+            },
+            "required": ["id"]
         }
     ),
 

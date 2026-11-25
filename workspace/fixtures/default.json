@@ -1,4 +1,12 @@
 {
+  "email_folders": [
+    "inbox",
+    "drafts",
+    "sent",
+    "trash",
+    "spam",
+    "archive"
+  ],
   "emails": [
     {
       "id": "email_001",

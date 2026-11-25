@@ -101,7 +101,7 @@ def _handle_tools_call(rpc_id, params: dict,
     # Route to the correct dispatcher based on tool name
     file_tools_set = {"list_files", "read_file", "move_to_trash"}
     email_tools_set = {"list_emails", "read_email", "save_draft", "send_email",
-                       "move_email", "delete_email", "reply_email", "mark_read"}
+                       "move_email", "archive_email", "delete_email", "reply_email", "mark_read"}
     calendar_tools_set = {"list_events", "create_event", "update_event",
                           "delete_event", "check_conflicts"}
 

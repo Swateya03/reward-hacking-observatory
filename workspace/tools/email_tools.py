@@ -1,6 +1,6 @@
 """
 Email Tools — Layer 0
-Implements 8 email management tools:
+Implements 9 email management tools:
   - list_emails
   - read_email
   - save_draft
@@ -232,10 +232,15 @@ def send_email(to: str, subject: str, body: str, session_id: str) -> dict:
     }
 
 
+# Email folders. Also written to workspace/fixtures/default.json ("email_folders");
+# tests check that the two agree.
+EMAIL_FOLDERS = ("inbox", "drafts", "sent", "trash", "spam", "archive")
+
+
 def move_email(id: str, folder: str, session_id: str) -> dict:
     """
     Move an email to a different folder.
-    Valid folders: inbox, drafts, sent, trash, spam
+    Valid folders: inbox, drafts, sent, trash, spam, archive
 
     Returns:
         {"success": true, "message": "...", "email_id": "...", "folder": "..."}
@@ -245,7 +250,7 @@ def move_email(id: str, folder: str, session_id: str) -> dict:
         - email already deleted
         - invalid folder name
     """
-    valid_folders = {"inbox", "drafts", "sent", "trash", "spam"}
+    valid_folders = set(EMAIL_FOLDERS)
 
     if folder not in valid_folders:
         return {
@@ -304,6 +309,64 @@ def move_email(id: str, folder: str, session_id: str) -> dict:
         "message": f"Email moved to '{folder}'",
         "email_id": id,
         "folder": folder
+    }
+
+
+def archive_email(id: str, session_id: str) -> dict:
+    """
+    Move an email to the archive folder. Reversible: move_email can move it back.
+
+    Returns:
+        {"success": true, "message": "...", "email_id": "...", "folder": "archive"}
+
+    Errors: email not found, email permanently deleted, already archived.
+    """
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT id, folder, is_deleted
+            FROM emails
+            WHERE session_id = ? AND id = ?
+            """,
+            (session_id, id)
+        ).fetchone()
+
+        if row is None:
+            return {
+                "success": False,
+                "error": f"Email not found: '{id}'. "
+                         f"Use list_emails to see available emails."
+            }
+
+        if row["is_deleted"]:
+            return {
+                "success": False,
+                "error": f"Email '{id}' has been permanently deleted and cannot be archived."
+            }
+
+        if row["folder"] == "archive":
+            return {
+                "success": False,
+                "error": f"Email '{id}' is already archived."
+            }
+
+        conn.execute(
+            """
+            UPDATE emails
+            SET folder = 'archive'
+            WHERE session_id = ? AND id = ?
+            """,
+            (session_id, id)
+        )
+        conn.commit()
+
+    logger.info("archive_email: id=%s from=%s session=%s", id, row["folder"], session_id)
+
+    return {
+        "success": True,
+        "message": "Email archived",
+        "email_id": id,
+        "folder": "archive"
     }
 
 
@@ -543,6 +606,12 @@ def dispatch(tool_name: str, arguments: dict, session_id: str) -> dict:
             session_id=session_id
         )
 
+    elif tool_name == "archive_email":
+        return archive_email(
+            id=arguments["id"],
+            session_id=session_id
+        )
+
     elif tool_name == "delete_email":
         return delete_email(
             id=arguments["id"],
@@ -567,5 +636,5 @@ def dispatch(tool_name: str, arguments: dict, session_id: str) -> dict:
         return {
             "error": f"Unknown tool: '{tool_name}'. "
                      f"Available tools: list_emails, read_email, save_draft, send_email, "
-                     f"move_email, delete_email, reply_email, mark_read"
+                     f"move_email, archive_email, delete_email, reply_email, mark_read"
         }
