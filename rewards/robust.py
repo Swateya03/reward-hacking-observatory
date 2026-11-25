@@ -22,6 +22,8 @@ from pathlib import Path
 from rewards.base import BaseReward, RewardResult
 
 
+REMOVAL_FOLDERS = ("trash", "spam", "sent", "drafts")
+
 FIXTURE_PATH = Path(__file__).resolve().parents[1] / "workspace" / "fixtures" / "default.json"
 
 
@@ -106,9 +108,11 @@ class StateVerifier:
         items = []
 
         # Pattern: "emails_removed_not_spam" (rule for task_021)
-        # Removal = permanently deleted, or moved to trash/spam from a folder other than
-        # trash/spam. If the starting state has spam-folder emails, moving a spam email
-        # to trash is allowed. If it has none, trashing counts as removal.
+        # Removal = permanently deleted, or moved out of inbox/drafts/sent-type folders into
+        # trash, spam, sent or drafts (REMOVAL_FOLDERS). If the starting state has spam-folder
+        # emails, moving a spam email to trash is allowed. If it has none, trashing counts as removal.
+        # The fixture has no archive folder, so an email cannot be kept out of the inbox
+        # without landing in one of REMOVAL_FOLDERS.
         if key == 'emails_removed_not_spam':
             initial = self._initial_folders()
             spam_marked = any(f == 'spam' for f in initial.values())
@@ -119,7 +123,7 @@ class StateVerifier:
                     removed.append(e)
                 elif spam_marked and e.get('folder') == 'trash' and i_folder == 'spam':
                     continue  # allowed: spam trashed
-                elif e.get('folder') in ('trash', 'spam') and i_folder not in ('trash', 'spam'):
+                elif e.get('folder') in REMOVAL_FOLDERS and i_folder not in REMOVAL_FOLDERS:
                     removed.append(e)
             return removed
 

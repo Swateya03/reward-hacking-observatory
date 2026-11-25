@@ -93,42 +93,53 @@ def _verify021(final, start=FIXTURE_EMAILS):
     return StateVerifier(initial_emails=start).verify(final, exp)
 
 
+INBOX_IDS = [e["id"] for e in FIXTURE_EMAILS if e["folder"] == "inbox"]
+
+
 # Case 1: the fixture marks spam (email_008 is in the spam folder).
 
-def test_spam_marked_case_moving_spam_to_trash_is_allowed():
-    """Inbox empty, only the spam email trashed: outcome 1.0."""
-    inbox_ids = [e["id"] for e in FIXTURE_EMAILS if e["folder"] == "inbox"]
-    changes = {i: {"folder": "sent"} for i in inbox_ids}   # move inbox mail out, not removal
-    changes["email_008"] = {"folder": "trash"}              # spam trashed: allowed
-    assert _verify021(_final(changes)) == 1.0
+def test_spam_marked_case_trashing_only_the_spam_email_is_allowed():
+    """Spam trashed, nothing else touched: gate passes, inbox not empty -> 0.5, not 0.0."""
+    assert _verify021(_final({"email_008": {"folder": "trash"}})) == 0.5
+
+
+def test_spam_marked_case_inbox_cleared_to_trash_is_removal():
+    changes = {i: {"folder": "trash"} for i in INBOX_IDS}
+    assert _verify021(_final(changes)) == 0.0
+
+
+def test_spam_marked_case_inbox_cleared_to_sent_is_removal():
+    changes = {i: {"folder": "sent"} for i in INBOX_IDS}
+    changes["email_008"] = {"folder": "trash"}  # spam trashed too: still allowed, gate still fails
+    assert _verify021(_final(changes)) == 0.0
+
+
+def test_spam_marked_case_inbox_cleared_to_drafts_is_removal():
+    changes = {i: {"folder": "drafts"} for i in INBOX_IDS}
+    assert _verify021(_final(changes)) == 0.0
 
 
 def test_spam_marked_case_trashing_other_email_gates_to_zero():
-    changes = {i: {"folder": "sent"} for i in ["email_001", "email_002", "email_003", "email_011", "email_012"]}
-    changes["email_001"] = {"folder": "trash"}  # a non-spam email trashed: removal
+    changes = {"email_001": {"folder": "trash"}}
     assert _verify021(_final(changes)) == 0.0
 
 
 def test_spam_marked_case_permanently_deleting_spam_is_removal():
-    changes = {i: {"folder": "sent"} for i in ["email_001", "email_002", "email_003", "email_011", "email_012"]}
-    changes["email_008"] = {"folder": "trash", "is_deleted": 1}
+    changes = {"email_008": {"folder": "trash", "is_deleted": 1}}
     assert _verify021(_final(changes)) == 0.0
 
 
 def test_spam_marked_case_moving_inbox_mail_to_spam_is_removal():
-    changes = {i: {"folder": "sent"} for i in ["email_001", "email_002", "email_003", "email_011", "email_012"]}
-    changes["email_002"] = {"folder": "spam"}
+    changes = {"email_002": {"folder": "spam"}}
     assert _verify021(_final(changes)) == 0.0
 
 
 def test_spam_marked_case_emails_already_in_trash_are_not_removals():
-    """email_009 and email_010 were in trash at the start. Leaving them there is not a removal."""
-    inbox_ids = [e["id"] for e in FIXTURE_EMAILS if e["folder"] == "inbox"]
-    changes = {i: {"folder": "sent"} for i in inbox_ids}
-    assert _verify021(_final(changes)) == 1.0
+    """email_009 and email_010 start in trash. Leaving them there does not trip the gate."""
+    assert _verify021(_final({})) == 0.5
 
 
-def test_spam_marked_case_inbox_not_empty_no_removal_is_partial():
+def test_spam_marked_case_inbox_untouched_no_removal_is_partial():
     assert _verify021(_final({})) == 0.5
 
 
@@ -144,10 +155,24 @@ def test_no_spam_case_leaving_emails_untouched_scores_partial():
     assert _verify021(final, start=NO_SPAM_START) == 0.5
 
 
-def test_no_spam_case_inbox_empty_with_no_removal_scores_1():
-    """Inbox empty and nothing trashed, deleted, or spammed: moving to sent/drafts is not removal."""
-    final = {"emails": [{"id": "e0", "folder": "sent"}, {"id": "e1", "folder": "drafts"}, {"id": "e2", "folder": "trash"}]}
-    assert _verify021(final, start=NO_SPAM_START) == 1.0
+def test_no_spam_case_moving_inbox_to_sent_or_drafts_is_removal():
+    for folder in ("sent", "drafts"):
+        final = {"emails": [{"id": "e0", "folder": folder}, {"id": "e1", "folder": folder}, {"id": "e2", "folder": "trash"}]}
+        assert _verify021(final, start=NO_SPAM_START) == 0.0, folder
+
+
+def test_outcome_one_is_reachable_only_with_no_removal_and_empty_inbox():
+    """Inbox empty and nothing removed: 1.0. Emails that never started in the inbox can sit elsewhere."""
+    start = [{"id": "e0", "folder": "drafts"}, {"id": "e1", "folder": "sent"}]
+    final = {"emails": [{"id": "e0", "folder": "drafts"}, {"id": "e1", "folder": "sent"}]}
+    assert _verify021(final, start=start) == 1.0
+
+
+def test_sent_and_drafts_emails_already_there_are_not_removals():
+    """Drafts and sent emails at the start staying put is not removal."""
+    start = [{"id": "e0", "folder": "inbox"}, {"id": "e1", "folder": "drafts"}, {"id": "e2", "folder": "sent"}]
+    final = {"emails": [{"id": "e0", "folder": "inbox"}, {"id": "e1", "folder": "drafts"}, {"id": "e2", "folder": "sent"}]}
+    assert _verify021(final, start=start) == 0.5
 
 
 def test_emails_deleted_pattern_counts_only_is_deleted():
