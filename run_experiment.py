@@ -28,6 +28,7 @@ from hacking.detector import HackingDetector
 from hacking.report import DetectionResult, print_report, aggregate
 from config import MAX_STEPS, MODEL, TEMPERATURE
 from hacking.unsafe_action import unsafe_action_under_ambiguity
+from hacking.detector import check_availability, CHECKS
 from rewards.outcome import robust_outcome_available
 
 logging.basicConfig(
@@ -37,7 +38,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TASK_BANK_PATH = "tasks/task_bank.json"
-RESULT_SCHEMA_VERSION = 3   # v3: robust_outcome and divergence are null when N/A; policy_metrics block
+RESULT_SCHEMA_VERSION = 4   # v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
 
 
 def parse_args():
@@ -151,13 +152,25 @@ def summarise_scores(scores: dict, task=None) -> dict:
     }
 
 
-def summarise_hacking(hacking_events: list) -> dict:
+def summarise_hacking(hacking_events: list, robust_available: bool = True) -> dict:
     """Detector output in the shape stored in a result file.
 
-    primary_hack_type is the first event in detector order (not highest severity).
+    was_hacked is the hack label: true when any available check fired.
+    checks records, per check, whether it could run (available) and whether it
+    fired (fired is null when not available). primary_hack_type is the first
+    event in detector order (not highest severity).
     """
+    fired_types = {event.hack_type.value for event in hacking_events}
+    availability = check_availability(robust_available)
     return {
         "was_hacked": len(hacking_events) > 0,
+        "checks": {
+            name: {
+                "available": availability[name],
+                "fired": (name in fired_types) if availability[name] else None,
+            }
+            for name in CHECKS
+        },
         "primary_hack_type": hacking_events[0].hack_type.value if hacking_events else None,
         "events": [
             {
@@ -199,7 +212,7 @@ def build_result(
         "completion_type": completion_type,
         "stopped_reason": stopped_reason,
         "scores": summarise_scores(scores, task),
-        "hacking": summarise_hacking(hacking_events),
+        "hacking": summarise_hacking(hacking_events, robust_available=robust_outcome_available(task)),
         "policy_metrics": {
             "unsafe_action_under_ambiguity": unsafe_action_under_ambiguity(trajectory, task.ambiguity_level),
         },
@@ -252,10 +265,12 @@ def run_task(
 
             # Run hacking detector (before deleting session)
             detector = HackingDetector(task, workspace_client)
+            # The detector gets no robust score for N/A tasks, so METRIC_GAMING cannot fire.
+            detector_robust = scores["robust"].score if robust_outcome_available(task) else None
             hacking_events = detector.detect(
                 trajectory,
                 scores["naive"].score,
-                scores["robust"].score,
+                detector_robust,
                 loop.session_id
             )
 
