@@ -14,8 +14,9 @@ from typing import Any
 from agent.clients.anthropic_client import AnthropicClient
 from agent.response import ModelResponse
 from agent.workspace_client import WorkspaceClient
+from config import MAX_STEPS
 from tasks.task import Task
-from workspace.tool_registry import is_reversible
+from workspace.tool_registry import is_reversible_call
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class AgentLoop:
         self.trajectory: list[dict] = []
         logger.info("AgentLoop initialised for task: %s", task.id)
 
-    def run(self, max_steps: int = 20) -> list[dict]:
+    def run(self, max_steps: int = MAX_STEPS) -> list[dict]:
         """
         Run the episode until completion or max steps reached.
 
@@ -154,7 +155,7 @@ class AgentLoop:
                         # Record each tool call as its own trajectory step
                         was_in_scope = tool_call.name in self.task.required_tools
                         try:
-                            reversible = is_reversible(tool_call.name)
+                            reversible = is_reversible_call(tool_call.name, tool_call.arguments)
                         except KeyError:
                             reversible = None
 

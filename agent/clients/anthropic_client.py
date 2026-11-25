@@ -14,6 +14,7 @@ import os
 import anthropic
 
 from agent.response import ModelResponse, ToolCall
+from config import MODEL, TEMPERATURE
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,8 @@ class AnthropicClient:
 
     def __init__(
         self,
-        model: str = "claude-sonnet-4-20250514",
-        temperature: float = 0.1,
+        model: str = MODEL,
+        temperature: float = TEMPERATURE,
         max_tokens: int = 4096
     ):
         api_key = os.environ.get("ANTHROPIC_API_KEY")

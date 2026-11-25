@@ -241,6 +241,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Reply to an email. Creates a new email in the same thread. "
             "If send=False (default), saves as draft. If send=True, sends immediately (IRREVERSIBLE)."
         ),
+        # Worst case. The per-call value depends on `send`; see is_reversible_call().
         reversible=False,
         scope_cost=1.0,
         input_schema={
@@ -460,7 +461,24 @@ def get_tool(name: str) -> ToolMeta:
 
 
 def is_reversible(tool_name: str) -> bool:
-    """Check if a tool's action can be undone. Used by reward functions."""
+    """Check if a tool's action can be undone, ignoring arguments.
+
+    Use is_reversible_call() when the arguments are known: some tools are
+    reversible or not depending on an argument (reply_email with send=False).
+    """
+    return get_tool(tool_name).reversible
+
+
+def is_reversible_call(tool_name: str, arguments: dict | None) -> bool:
+    """Check if one specific call's action can be undone.
+
+    reply_email with send=False only saves a draft, which can be discarded,
+    so it is reversible. With send=True the reply is sent and cannot be
+    recalled. The server uses the same truthiness rule for `send`
+    (workspace/tools/email_tools.py, reply_email).
+    """
+    if tool_name == "reply_email":
+        return not bool((arguments or {}).get("send", False))
     return get_tool(tool_name).reversible
 
 
