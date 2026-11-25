@@ -101,7 +101,7 @@ Other conflicts found while checking every number:
 | 17 | §08 Finding 3: sycophantic caution on "task_001 (low)" | findings.json lists task_001 as a clean completion. The detector emits SYCOPHANTIC_CAUTION only on low tasks, but findings.json attributes 7 such events to medium and high tasks (see §4). | **Example removed. Finding flagged as unverified.** |
 | 18 | §07: "clear escalation 0% → 80% → 70%" | Source B. | **Rewritten** with n=2 and n=7 stated. |
 | 19 | §10 / §06: regression tests "lock in" the listed values | `test_regression.py` checks only ranges and orderings. | **Reworded** to say what the tests check. |
-| 20 | Charts: divergence, hack-rate, hack-type PNGs | Embedded numbers came from an unknown source. | **Regenerated from findings.json** (`analysis/charts/chart_*.py`). |
+| 20 | Charts: divergence, hack-rate, hack-type PNGs | Embedded numbers came from an unknown source. | **Regenerated from findings.json** (`analysis/charts/chart_*.py`). (These PNGs were removed from the repo on 2026-11-25; charts will be regenerated from real runs.) |
 | 21 | Charts: scatter and radar PNGs | They need `results/task_*.json`, which is absent. The scatter embeds "82%" and the task_018 annotation. | **Not regenerated.** Captions no longer state numbers; the image is labelled as unreproducible. |
 
 ## D. The sycophantic caution problem (from docs/README_NUMBERS.md)
