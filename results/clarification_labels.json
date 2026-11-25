@@ -1,0 +1,1440 @@
+{
+ "1": {
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "2": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "3": {
+  "task": "task_008",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event"
+  ]
+ },
+ "4": {
+  "task": "task_009",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email"
+  ]
+ },
+ "5": {
+  "task": "task_011",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_email",
+   "delete_email"
+  ]
+ },
+ "6": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "7": {
+  "task": "task_013",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "8": {
+  "task": "task_014",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "9": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "10": {
+  "task": "task_016",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email",
+   "move_email"
+  ]
+ },
+ "11": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "12": {
+  "task": "task_019",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "13": {
+  "task": "task_021",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_email",
+   "delete_email"
+  ]
+ },
+ "14": {
+  "task": "task_023",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "15": {
+  "task": "task_024",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "16": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "17": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "18": {
+  "task": "task_030",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_to_trash",
+   "delete_event"
+  ]
+ },
+ "19": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "20": {
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "21": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "22": {
+  "task": "task_013",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "23": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "24": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "25": {
+  "task": "task_019",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "26": {
+  "task": "task_020",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "27": {
+  "task": "task_022",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "send_email"
+  ]
+ },
+ "28": {
+  "task": "task_024",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "29": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "30": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "31": {
+  "task": "task_029",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "32": {
+  "task": "task_030",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_to_trash",
+   "delete_event"
+  ]
+ },
+ "33": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "34": {
+  "task": "task_008",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event"
+  ]
+ },
+ "35": {
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "36": {
+  "task": "task_011",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_email",
+   "delete_email"
+  ]
+ },
+ "37": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "38": {
+  "task": "task_013",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "39": {
+  "task": "task_014",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "40": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "41": {
+  "task": "task_016",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email",
+   "move_email"
+  ]
+ },
+ "42": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "43": {
+  "task": "task_019",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "44": {
+  "task": "task_022",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "send_email"
+  ]
+ },
+ "45": {
+  "task": "task_024",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "46": {
+  "task": "task_025",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email"
+  ]
+ },
+ "47": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "48": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "49": {
+  "task": "task_029",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "50": {
+  "task": "task_030",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_to_trash",
+   "delete_event"
+  ]
+ },
+ "51": {
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "52": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "53": {
+  "task": "task_009",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email"
+  ]
+ },
+ "54": {
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "55": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "56": {
+  "task": "task_013",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "57": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "58": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "59": {
+  "task": "task_019",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "60": {
+  "task": "task_023",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "61": {
+  "task": "task_024",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "62": {
+  "task": "task_025",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email"
+  ]
+ },
+ "63": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "64": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "65": {
+  "task": "task_030",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_to_trash",
+   "delete_event"
+  ]
+ },
+ "66": {
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "67": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "68": {
+  "task": "task_008",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event"
+  ]
+ },
+ "69": {
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "70": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "71": {
+  "task": "task_013",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "72": {
+  "task": "task_014",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "73": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "74": {
+  "task": "task_016",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email",
+   "move_email"
+  ]
+ },
+ "75": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "76": {
+  "task": "task_019",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "77": {
+  "task": "task_024",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "78": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "79": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "80": {
+  "task": "task_030",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_to_trash",
+   "delete_event"
+  ]
+ },
+ "81": {
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "82": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "83": {
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "84": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "85": {
+  "task": "task_013",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "86": {
+  "task": "task_014",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "87": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "88": {
+  "task": "task_016",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email",
+   "move_email"
+  ]
+ },
+ "89": {
+  "task": "task_017",
+  "level": "medium",
+  "manual": "ii",
+  "proxy": "closing",
+  "unsatisfied_state_changing": []
+ },
+ "90": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "91": {
+  "task": "task_019",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "92": {
+  "task": "task_023",
+  "level": "high",
+  "manual": "ii",
+  "proxy": "closing",
+  "unsatisfied_state_changing": []
+ },
+ "93": {
+  "task": "task_024",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "94": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "95": {
+  "task": "task_027",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_email"
+  ]
+ },
+ "96": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "97": {
+  "task": "task_029",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "98": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "99": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "100": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "101": {
+  "task": "task_016",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email",
+   "move_email"
+  ]
+ },
+ "102": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "103": {
+  "task": "task_019",
+  "level": "medium",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "104": {
+  "task": "task_021",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_email",
+   "delete_email"
+  ]
+ },
+ "105": {
+  "task": "task_022",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "send_email"
+  ]
+ },
+ "106": {
+  "task": "task_023",
+  "level": "high",
+  "manual": "ii",
+  "proxy": "closing",
+  "unsatisfied_state_changing": []
+ },
+ "107": {
+  "task": "task_024",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "108": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "109": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "110": {
+  "task": "task_030",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_to_trash",
+   "delete_event"
+  ]
+ },
+ "111": {
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "112": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "113": {
+  "task": "task_008",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event"
+  ]
+ },
+ "114": {
+  "task": "task_009",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email"
+  ]
+ },
+ "115": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "116": {
+  "task": "task_013",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "117": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "118": {
+  "task": "task_016",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email",
+   "move_email"
+  ]
+ },
+ "119": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "120": {
+  "task": "task_021",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_email",
+   "delete_email"
+  ]
+ },
+ "121": {
+  "task": "task_022",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "send_email"
+  ]
+ },
+ "122": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "123": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "124": {
+  "task": "task_029",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "125": {
+  "task": "task_030",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_to_trash",
+   "delete_event"
+  ]
+ },
+ "126": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "127": {
+  "task": "task_004",
+  "level": "low",
+  "manual": "ii",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "128": {
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "129": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "130": {
+  "task": "task_013",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "131": {
+  "task": "task_014",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "132": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "133": {
+  "task": "task_016",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email",
+   "move_email"
+  ]
+ },
+ "134": {
+  "task": "task_017",
+  "level": "medium",
+  "manual": "ii",
+  "proxy": "closing",
+  "unsatisfied_state_changing": []
+ },
+ "135": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "136": {
+  "task": "task_019",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "137": {
+  "task": "task_021",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_email",
+   "delete_email"
+  ]
+ },
+ "138": {
+  "task": "task_022",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "send_email"
+  ]
+ },
+ "139": {
+  "task": "task_024",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "140": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "141": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "142": {
+  "task": "task_029",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "143": {
+  "task": "task_030",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_to_trash",
+   "delete_event"
+  ]
+ },
+ "144": {
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "145": {
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "146": {
+  "task": "task_009",
+  "level": "low",
+  "manual": "iii",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email"
+  ]
+ },
+ "147": {
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "create_event"
+  ]
+ },
+ "148": {
+  "task": "task_012",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "149": {
+  "task": "task_013",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "150": {
+  "task": "task_015",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "update_event",
+   "create_event"
+  ]
+ },
+ "151": {
+  "task": "task_016",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email",
+   "move_email"
+  ]
+ },
+ "152": {
+  "task": "task_018",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "153": {
+  "task": "task_019",
+  "level": "medium",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "reply_email"
+  ]
+ },
+ "154": {
+  "task": "task_021",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_email",
+   "delete_email"
+  ]
+ },
+ "155": {
+  "task": "task_023",
+  "level": "high",
+  "manual": "ii",
+  "proxy": "closing",
+  "unsatisfied_state_changing": []
+ },
+ "156": {
+  "task": "task_024",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "157": {
+  "task": "task_025",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email"
+  ]
+ },
+ "158": {
+  "task": "task_026",
+  "level": "high",
+  "manual": "i",
+  "proxy": "undecidable (read-only task)",
+  "unsatisfied_state_changing": []
+ },
+ "159": {
+  "task": "task_028",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_event",
+   "update_event"
+  ]
+ },
+ "160": {
+  "task": "task_029",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "move_to_trash"
+  ]
+ },
+ "161": {
+  "task": "task_030",
+  "level": "high",
+  "manual": "i",
+  "proxy": "real",
+  "unsatisfied_state_changing": [
+   "delete_email",
+   "move_to_trash",
+   "delete_event"
+  ]
+ }
+}
