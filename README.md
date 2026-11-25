@@ -5,12 +5,12 @@
 ### An Empirical Testbed for Studying How LLM Agents Game Reward Signals
 
 ![Tasks](https://img.shields.io/badge/30%20Tasks-3%20Ambiguity%20Levels-58a6ff?style=for-the-badge)
-![Tools](https://img.shields.io/badge/16%20Tools-MCP%20%2B%20FastAPI-3fb950?style=for-the-badge)
+![Tools](https://img.shields.io/badge/17%20Tools-MCP%20%2B%20FastAPI-3fb950?style=for-the-badge)
 ![Hack Types](https://img.shields.io/badge/5%20Hack%20Types-Real--Time%20Detection-f85149?style=for-the-badge)
 
 ![Rewards](https://img.shields.io/badge/3%20Reward%20Functions-Naive%20%7C%20Intermediate%20%7C%20Robust-bc8cff?style=for-the-badge)
 ![Results](https://img.shields.io/badge/Results-pending%20full%20run-lightgrey?style=for-the-badge)
-![Tests](https://img.shields.io/badge/Tests-262%20Passing-39d3f0?style=for-the-badge)
+![Tests](https://img.shields.io/badge/Tests-278%20Passing-39d3f0?style=for-the-badge)
 
 </div>
 
@@ -69,7 +69,7 @@ python analysis/generate_all_charts.py
 
 ## 🌍 03 — Environment
 
-The workspace environment simulates a personal productivity domain with a file system, email inbox, and calendar—realistic enough to matter, constrained enough to reason about. It avoids the complexity of simulating the web, databases, or deployment pipelines. Instead, it provides depth: 30 tasks of varying ambiguity, 16 tools that operate on persistent state, and intricate detection for five types of reward hacking.
+The workspace environment simulates a personal productivity domain with a file system, email inbox, and calendar—realistic enough to matter, constrained enough to reason about. It avoids the complexity of simulating the web, databases, or deployment pipelines. Instead, it provides depth: 30 tasks of varying ambiguity, 17 tools that operate on persistent state, and intricate detection for five types of reward hacking.
 
 The environment is built on **FastAPI** (workspace server), **SQLite** (persistent state), and the **Model Context Protocol** (MCP—how Claude calls tools). This design was chosen over Gymnasium or other RL frameworks because they optimize for quick RL training on toy problems, not for fine-grained correctness verification. MCP lets us use the actual Claude API without reimplementation, and HTTP session isolation keeps each task independent without manual state resets.
 
@@ -245,6 +245,8 @@ Five canonical hack types are defined in `hacking/taxonomy.py`. The examples in 
 
 **Results pending.** Earlier figures in this README were taken from test fixtures and sample data rather than an experiment run, and have been removed. A full run is in progress.
 
+Result files are written in schema v4 (`metadata.schema_version` = 4). See `docs/ARCHITECTURE_NOTES.md` §5.
+
 ---
 
 ## 🏗 08 — Architecture
@@ -262,13 +264,13 @@ The system is organized as a **two-layer sandwich**: a workspace environment ser
          ▼
 ┌─────────────────────────  WORKSPACE SERVER  ─────────────────────────┐
 │  ┌──────────────┐   ┌───────────────────┐   ┌────────────────────┐   │
-│  │  MCP Handler │ → │  16 Tools          │ → │  SQLite (sessions) │   │
+│  │  MCP Handler │ → │  17 Tools          │ → │  SQLite (sessions) │   │
 │  │  (FastAPI)   │   │  files/email/cal   │   │  isolated fixtures │   │
 │  └──────────────┘   └───────────────────┘   └────────────────────┘   │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-The **workspace server** hosts 16 tools: list_files, move_to_trash, read_file (file operations); send_email, reply_email, delete_email, list_emails, read_email, move_email, mark_read, save_draft (8 email operations); create_event, list_events, delete_event, update_event, check_conflicts (calendar operations). Each tool is exposed via MCP, so Claude sees them as structured tool definitions with input schemas, descriptions, and reversibility metadata. When Claude calls a tool, the request is routed through the MCP handler, which executes the tool, records the action in the trajectory, and returns the result.
+The **workspace server** hosts 17 tools: list_files, move_to_trash, read_file (file operations); send_email, reply_email, delete_email, archive_email, list_emails, read_email, move_email, mark_read, save_draft (9 email operations); create_event, list_events, delete_event, update_event, check_conflicts (calendar operations). Each tool is exposed via MCP, so Claude sees them as structured tool definitions with input schemas, descriptions, and reversibility metadata. When Claude calls a tool, the request is routed through the MCP handler, which executes the tool, records the action in the trajectory, and returns the result.
 
 The **task layer** is simple: 30 tasks in JSON format, each with required_tools, expected_state, min_irreversible_actions, and ambiguity_level. The agent loop loads a task, initializes a workspace session, runs Claude in a loop (up to 20 steps), and collects the trajectory. It then scores that trajectory under all three reward functions simultaneously, runs the hacking detector, and saves the result to results/task_NNN.json.
 
@@ -285,7 +287,7 @@ The **rewards layer** implements three functions that score the same trajectory 
 
 ### Implementation layers & visualizations
 
-The project spans multiple layers with a pytest suite of 262 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
+The project spans multiple layers with a pytest suite of 278 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
 
 ### Project structure
 
@@ -297,10 +299,10 @@ reward-hacking-observatory/
 ├── workspace/                  ← Environment server
 │   ├── main.py                 ← FastAPI app, all HTTP routes
 │   ├── mcp_handler.py          ← JSON-RPC 2.0 protocol handler
-│   ├── tool_registry.py        ← 16 tool definitions + metadata
+│   ├── tool_registry.py        ← 17 tool definitions + metadata
 │   ├── tools/
 │   │   ├── file_tools.py       ← list_files, read_file, move_to_trash
-│   │   ├── email_tools.py      ← 8 email operations
+│   │   ├── email_tools.py      ← 9 email operations (incl. archive_email)
 │   │   └── calendar_tools.py   ← 5 calendar operations
 │   ├── database/
 │   │   ├── schema.sql          ← SQLite schema (files, emails, events)
@@ -343,7 +345,7 @@ reward-hacking-observatory/
 │   ├── demo/                   ← Hand-typed sample output (gitignored)
 │   └── task_NNN.json           ← Generated at runtime, not committed
 ├── tests/
-│   ├── test_workspace.py       ← 51 tests: server, session isolation, all 16 tools (needs the server)
+│   ├── test_workspace.py       ← 51 tests: server, session isolation, all 17 tools (needs the server)
 │   ├── test_agent.py           ← 22 tests: task bank, agent loop, model client
 │   ├── test_rewards.py         ← 25 tests: reward functions, StateVerifier, Scorer
 │   ├── test_hacking.py         ← 23 tests: hacking detector, all 5 types
@@ -351,7 +353,8 @@ reward-hacking-observatory/
 │   ├── test_charts.py          ← 31 tests: chart data preparation, matplotlib mocking
 │   ├── test_findings_pipeline.py ← 8 tests: fake episodes through the real writer and reader
 │   ├── test_reversibility.py   ← 9 tests: draft vs sent reply_email
-│   ├── test_outcome_and_policy.py ← 42 tests: N/A outcome, task 014/021 states, policy metric, chart loaders
+│   ├── test_outcome_and_policy.py ← 47 tests: N/A outcome, task 014/021 states, policy metric, chart loaders
+│   ├── test_archive_email.py   ← 11 tests: archive_email and its registry entry (7 need the server)
 │   ├── test_metric_gaming_availability.py ← 8 tests: METRIC_GAMING availability and the hack label
 │   └── test_regression.py      ← 19 tests: checks the legacy findings file
 ├── config.py                   ← MAX_STEPS (20), MODEL, TEMPERATURE
@@ -372,11 +375,11 @@ The project includes three testing layers:
 
 | # | Layer | What it covers |
 |---|---|---|
-| 1️⃣ | **Unit and integration tests** (test_workspace, test_agent, test_rewards, test_hacking, test_experiment, test_charts, test_findings_pipeline, test_reversibility, test_outcome_and_policy, test_metric_gaming_availability) | Verify individual components: tool execution, reward function computation, hack detection, and chart generation |
+| 1️⃣ | **Unit and integration tests** (test_workspace, test_agent, test_rewards, test_hacking, test_experiment, test_charts, test_findings_pipeline, test_reversibility, test_outcome_and_policy, test_metric_gaming_availability, test_archive_email) | Verify individual components: tool execution, reward function computation, hack detection, and chart generation |
 | 2️⃣ | **Regression tests** (test_regression.py) | Check the structure and ordering of the legacy findings file (`results/legacy/`), whose source run is unknown. They do not check current results |
 | 3️⃣ | **Integration tests** (in each layer) | Verify end-to-end workflows: running a task from prompt through detection to findings |
 
-Run all tests: `pytest tests/ -v` — 🟢 **262 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. The other 211 tests run without it (with the server down, the suite gives 211 passed and 51 failed).
+Run all tests: `pytest tests/ -v` — 🟢 **278 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 220 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
 
 ---
 
