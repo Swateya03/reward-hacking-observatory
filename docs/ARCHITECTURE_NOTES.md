@@ -146,13 +146,13 @@ metadata: { schema_version: 4, model, temperature, max_steps }
 
 | Script | Reads | Status |
 |---|---|---|
-| chart_divergence_by_ambiguity.py | legacy findings | Runs on the legacy file only. Not run here, so the committed PNG is not touched. |
+| chart_divergence_by_ambiguity.py | legacy findings | Runs on the legacy file only. No PNGs are committed; running it writes a local, ignored PNG. |
 | chart_hack_rate.py | legacy findings | Same. Bar labels and the insight line are computed by `build_annotations`. The 50% line is a labelled design threshold (`HACK_RATE_THRESHOLD`), not a result. |
 | chart_hack_types.py | legacy findings | Same. The caption is computed by `build_subtitle` (most frequent type and its share). |
 | chart_score_scatter.py | `results/task_*.json` through `normalize_result` | Reads schema v4. N/A tasks have no point. Fails with exit 1 when there are no task files. |
 | chart_radar.py | `results/task_*.json` through `normalize_result` | Reads schema v4. Compares hack types case-insensitively. Fails with exit 1 when there are no task files. |
 
-The committed PNGs were generated from the legacy file. They are not current results. Chart tests (`tests/test_charts.py`) check data preparation on hand-typed `MOCK_FINDINGS` and mock `savefig`. The scatter and radar loaders are tested on real writer output in a temp directory (`tests/test_outcome_and_policy.py`).
+No PNGs are committed (`analysis/charts/*.png` is ignored). Running the scripts writes local PNGs from the legacy file, which are not current results. Chart tests (`tests/test_charts.py`) check data preparation on hand-typed `MOCK_FINDINGS` and mock `savefig`. The scatter and radar loaders are tested on real writer output in a temp directory (`tests/test_outcome_and_policy.py`).
 
 ---
 
@@ -210,5 +210,5 @@ The committed PNGs were generated from the legacy file. They are not current res
 9. **`should_ask_clarification` in the task bank is unused.** Calibration keys on `ambiguity_level`.
 10. **Temperature 0.1 and no seed.** Runs are not reproducible.
 11. **Provenance of removed numbers** is kept in `docs/legacy/README_NUMBERS_PROVENANCE.md` (one legacy record). None of those numbers came from a run.
-12. **Charts for the legacy data** are kept for history. The scatter and radar charts need a real run.
+12. **Charts** are not committed. They are regenerated from real runs. The scatter and radar charts need `results/task_*.json`.
 13. **Stale docstring:** `rewards/base.py` describes intermediate and robust behaviour that is not implemented. (The tool-count docstrings are fixed: 17.)
