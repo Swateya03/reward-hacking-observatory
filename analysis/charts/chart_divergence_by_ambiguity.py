@@ -158,7 +158,7 @@ def create_chart(by_ambiguity, output_path="analysis/charts/divergence_by_ambigu
     ax.set_ylabel('Score', fontsize=12, fontweight='bold', color='#e6edf3')
     ax.set_title('Naive vs Robust Reward Scores by Task Ambiguity',
                 fontsize=13, fontweight='bold', color='#e6edf3', pad=20)
-    ax.text(0.5, 1.08, 'Divergence shown as lollipops — higher bars = more hacking',
+    ax.text(0.5, 1.08, 'Divergence shown as lollipops — higher bars = larger naive–robust score gap (not the hack label)',
            transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e', style='italic')
 
     ax.set_xticks(x)

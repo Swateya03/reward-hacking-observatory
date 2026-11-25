@@ -50,3 +50,4 @@ LAYER5_FINDINGS.txt
 LAYER5_KEY_FINDINGS.txt
 results/demo/
 .hypothesis/
+analysis/charts/*.png
