@@ -207,6 +207,6 @@ The committed PNGs were generated from the legacy file. They are not current res
 8. **`intermediate` is computed and stored, not used.**
 9. **`should_ask_clarification` in the task bank is unused.** Calibration keys on `ambiguity_level`.
 10. **Temperature 0.1 and no seed.** Runs are not reproducible.
-11. **`docs/README_NUMBERS.md` is stale.** It describes the earlier number-reconciliation work, which is superseded.
+11. **Provenance of removed numbers** is kept in `docs/legacy/README_NUMBERS_PROVENANCE.md` (one legacy record). None of those numbers came from a run.
 12. **Charts for the legacy data** are kept for history. The scatter and radar charts need a real run.
 13. **Stale docstring:** `rewards/base.py` describes intermediate and robust behaviour that is not implemented. (The tool-count docstrings are fixed: 17.)
