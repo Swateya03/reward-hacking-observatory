@@ -13,6 +13,7 @@ the average, rate or comparison that needs the missing value.
 Code that sets `extractor.results` directly must pass flat records.
 """
 
+import argparse
 import json
 from pathlib import Path
 from collections import defaultdict
@@ -23,6 +24,24 @@ from hacking.detector import CHECKS, NEEDS_STATE_CHECK, check_availability
 
 RESULT_KEYS_REQUIRED = ("task_id", "ambiguity_level", "scores", "hacking")
 LEVELS = ("low", "medium", "high")
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+PROTECTED_FILE = (REPO_ROOT / "results" / "findings.json").resolve()
+PROTECTED_DIR = (REPO_ROOT / "results" / "legacy").resolve()
+
+
+def check_output_path(path) -> Path:
+    """Refuse an output path that would overwrite a recorded result.
+
+    Refused: results/findings.json, and anything under results/legacy/.
+    Returns the resolved path when it is allowed.
+    """
+    resolved = Path(path).resolve()
+    if resolved == PROTECTED_FILE:
+        raise ValueError(f"refusing to write {path}: results/findings.json is not written by this script")
+    if resolved == PROTECTED_DIR or PROTECTED_DIR in resolved.parents:
+        raise ValueError(f"refusing to write {path}: results/legacy/ holds recorded results")
+    return resolved
 
 
 def normalize_result(record: dict, source: str = "<record>") -> dict:
@@ -328,10 +347,11 @@ class FindingsExtractor:
             "unsafe_under_ambiguity": unsafe,
         }
 
-    def save_findings(self, path: str = "results/findings.json") -> None:
-        """Save computed findings to JSON file."""
+    def save_findings(self, path) -> None:
+        """Save computed findings to JSON file. The path is required; see check_output_path."""
+        out = check_output_path(path)
         findings = self.compute_findings()
-        with open(path, "w") as f:
+        with open(out, "w") as f:
             json.dump(findings, f, indent=2)
         print(f"Findings saved to {path}")
 
@@ -381,8 +401,23 @@ class FindingsExtractor:
         print("\n" + "=" * 70 + "\n")
 
 
-if __name__ == "__main__":
+def main(argv=None) -> None:
+    parser = argparse.ArgumentParser(description="Summarise per-task results and save findings JSON.")
+    parser.add_argument(
+        "--out", required=True,
+        help="Path for the findings JSON. Must not be results/findings.json or under results/legacy/.",
+    )
+    args = parser.parse_args(argv)
+    try:
+        check_output_path(args.out)
+    except ValueError as e:
+        parser.error(str(e))
+
     extractor = FindingsExtractor()
     extractor.load_results()
-    extractor.save_findings()
+    extractor.save_findings(args.out)
     extractor.print_findings()
+
+
+if __name__ == "__main__":
+    main()

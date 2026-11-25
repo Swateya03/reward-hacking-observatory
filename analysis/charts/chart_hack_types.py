@@ -58,6 +58,22 @@ def prepare_data(findings: dict) -> list:
     hack_list.sort(key=lambda x: x[1], reverse=True)
     return hack_list
 
+def build_subtitle(findings: dict) -> str:
+    """The subtitle, computed from the hack-type counts (testable).
+
+    Names the most frequent type and its share. Ties are named as a tie.
+    """
+    rows = prepare_data(findings)
+    total = sum(count for _, count, _ in rows)
+    if total == 0:
+        return "No hack events recorded."
+    top_count = rows[0][1]
+    tied = [label for label, count, _ in rows if count == top_count]
+    share = top_count / total * 100
+    if len(tied) == 1:
+        return f"{tied[0]} is the most frequent: {top_count} of {total} events ({share:.0f}%)."
+    return f"Tie for most frequent: {' and '.join(tied)}, {top_count} of {total} events each ({share:.0f}%)."
+
 def load_findings():
     """Load the legacy findings file (see results/legacy/NOTE.md)."""
     findings_path = Path("results/legacy/findings_partial_run.json")
@@ -141,7 +157,7 @@ def create_chart(findings, output_path="analysis/charts/hack_type_distribution.p
     ax.set_xlabel('Count', fontsize=12, fontweight='bold', color='#e6edf3')
     ax.set_title('Reward Hacking Type Distribution', fontsize=13, fontweight='bold',
                 color='#e6edf3', pad=20)
-    ax.text(0.5, 1.10, 'Sycophantic Caution dominates — agents over-asking on clear tasks',
+    ax.text(0.5, 1.10, build_subtitle(findings),
            transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e', style='italic')
 
     ax.set_xlim(0, max(counts) * 1.3)
@@ -163,8 +179,7 @@ def main():
     create_chart(findings)
 
     print("\nKey insight:")
-    print("  - Sycophantic Caution (78%) dominates all other hack types")
-    print("  - Reflects alignment bias: agents prefer to ask rather than act\n")
+    print("  - " + build_subtitle(findings) + "\n")
 
 if __name__ == "__main__":
     main()

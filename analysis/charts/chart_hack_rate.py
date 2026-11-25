@@ -27,6 +27,39 @@ MEDIUM_COLOR = '#d29922'
 HIGH_COLOR = '#f85149'
 NAIVE_COLOR = '#58a6ff'
 
+# Design constant: a reference line drawn on the hack-rate axis. It is a threshold,
+# not a result, so it is labelled as one.
+HACK_RATE_THRESHOLD = 0.5
+
+LEVEL_ORDER = ["low", "medium", "high"]
+
+
+def build_annotations(by_ambiguity: dict) -> dict:
+    """Every result-bearing string on the chart, computed from by_ambiguity (testable).
+
+    Returns:
+        bar_labels: {level: "NN%"} for the hack-rate bars
+        insight: the peak-level sentence, from the data
+        threshold_label: the fixed design line, labelled as a threshold
+    """
+    rates = {lvl: by_ambiguity.get(lvl, {}).get("hack_rate", 0.0) for lvl in LEVEL_ORDER}
+    bar_labels = {lvl: f"{rate * 100:.0f}%" for lvl, rate in rates.items()}
+
+    top = max(rates.values())
+    if top <= 0:
+        insight = "No hacks recorded at any ambiguity level."
+    else:
+        peaks = [lvl for lvl in LEVEL_ORDER if rates[lvl] == top]
+        names = " and ".join(p.capitalize() for p in peaks)
+        insight = f"Highest hack rate: {names} ambiguity ({top * 100:.0f}%)."
+
+    return {
+        "bar_labels": bar_labels,
+        "insight": insight,
+        "threshold_label": f"Threshold {HACK_RATE_THRESHOLD * 100:.0f}% (design line)",
+    }
+
+
 def prepare_data(findings: dict) -> dict:
     """Extract and prepare hack rate data (testable).
 
@@ -103,6 +136,8 @@ def create_chart(by_ambiguity, output_path="analysis/charts/hack_rate_by_ambigui
             hack_rates.append(0.0)
             divergences.append(0.0)
 
+    annotations = build_annotations(by_ambiguity)
+
     fig, ax1 = plt.subplots(figsize=(11, 6), facecolor='#0d1117')
     ax1.set_facecolor('#161b22')
 
@@ -115,8 +150,8 @@ def create_chart(by_ambiguity, output_path="analysis/charts/hack_rate_by_ambigui
         ax1.bar(xi - width/2, 1.0, width, color=color, alpha=0.3, zorder=1)
         # Filled bar at actual rate
         ax1.bar(xi - width/2, rate, width, color=color, alpha=0.9, zorder=2)
-        # Percentage label inside bar
-        ax1.text(xi - width/2, rate - 0.05, f'{rate*100:.0f}%', ha='center', va='top',
+        # Percentage label inside bar, computed from the data
+        ax1.text(xi - width/2, rate - 0.05, annotations["bar_labels"][level_keys[i]], ha='center', va='top',
                 fontsize=11, color='#e6edf3', fontweight='bold')
 
     ax1.set_xlabel('Ambiguity Level', fontsize=12, fontweight='bold', color='#e6edf3')
@@ -141,14 +176,13 @@ def create_chart(by_ambiguity, output_path="analysis/charts/hack_rate_by_ambigui
     ax2.set_ylabel('Divergence (Naive - Robust)', fontsize=12, fontweight='bold', color=NAIVE_COLOR)
     ax2.tick_params(axis='y', labelcolor=NAIVE_COLOR)
 
-    # 50% threshold line
-    ax1.axhline(y=0.5, color='#8b949e', linestyle=':', linewidth=1.5, zorder=1, alpha=0.7)
-    ax1.text(len(levels) - 0.3, 0.52, '50% threshold', fontsize=8, color='#8b949e', alpha=0.7)
+    # Threshold line (design constant, labelled as a threshold)
+    ax1.axhline(y=HACK_RATE_THRESHOLD, color='#8b949e', linestyle=':', linewidth=1.5, zorder=1, alpha=0.7)
+    ax1.text(len(levels) - 0.3, HACK_RATE_THRESHOLD + 0.02, annotations["threshold_label"],
+             fontsize=8, color='#8b949e', alpha=0.7)
 
-    # Arrow annotation between low and medium
-    ax1.annotate('', xy=(0.9, 0.95), xytext=(0.1, 0.1),
-                arrowprops=dict(arrowstyle='->', color=HIGH_COLOR, lw=2, alpha=0.5))
-    ax1.text(0.5, 0.5, '0%→100%', fontsize=9, color=HIGH_COLOR, alpha=0.6, ha='center')
+    ax1.text(0.5, 1.02, annotations["insight"], transform=ax1.transAxes,
+             ha='center', fontsize=9, color='#8b949e', style='italic')
 
     ax1.set_title('Hack Rate and Divergence by Task Ambiguity',
                  fontsize=13, fontweight='bold', color='#e6edf3', pad=20)
@@ -172,8 +206,7 @@ def main():
     create_chart(by_ambiguity)
 
     print("\nKey insight:")
-    print("  - Hack rate peaks at medium ambiguity (agents face genuine uncertainty)")
-    print("  - Divergence pattern mirrors hack rate (correlation confirmed)\n")
+    print("  - " + build_annotations(by_ambiguity)["insight"] + "\n")
 
 if __name__ == "__main__":
     main()
