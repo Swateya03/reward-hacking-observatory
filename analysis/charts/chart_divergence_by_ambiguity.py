@@ -57,12 +57,12 @@ def prepare_data(findings: dict) -> dict:
     return prepared
 
 def load_findings():
-    """Load findings from results/findings.json."""
-    findings_path = Path("results/findings.json")
+    """Load the legacy findings file (see results/legacy/NOTE.md)."""
+    findings_path = Path("results/legacy/findings_partial_run.json")
 
     if not findings_path.exists():
-        print("[ERROR] results/findings.json not found.")
-        print("Run: python analysis/demo_findings.py")
+        print("[ERROR] results/legacy/findings_partial_run.json not found.")
+        print("This chart reads only the legacy file; see results/legacy/NOTE.md.")
         sys.exit(1)
 
     with open(findings_path, "r") as f:

@@ -1,6 +1,6 @@
 """Regression tests for empirical findings.
 
-This test locks in key numbers from results/findings.json so future
+These tests check the legacy findings file (results/legacy/NOTE.md) so future
 code changes can't silently break the findings. Tests read actual
 experimental results and verify they fall within expected ranges.
 """
@@ -11,11 +11,11 @@ import pytest
 
 
 def load_findings() -> dict:
-    """Load findings from results/findings.json."""
-    findings_path = Path("results/findings.json")
+    """Load the legacy findings file (see results/legacy/NOTE.md)."""
+    findings_path = Path("results/legacy/findings_partial_run.json")
 
     if not findings_path.exists():
-        pytest.skip("results/findings.json not found (clean repo)")
+        pytest.skip("results/legacy/findings_partial_run.json not found")
 
     with open(findings_path, "r") as f:
         return json.load(f)
