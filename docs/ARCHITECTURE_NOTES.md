@@ -11,7 +11,7 @@ Rebuilt from the code on branch `main` (identical to `fix/readme-consistency` an
 - **No experiment has been run.** The repo holds no per-task result files and no `run_summary.json`. `results/` contains only `legacy/`.
 - **`results/findings.json` does not exist, and no script writes it.** The original file was moved to `results/legacy/findings_partial_run.json` in commit `83fff91`. `analysis/findings.py` refuses to write `results/findings.json` (`analysis/findings.py:29, 40-41`). The findings file is written to whatever path `--out` names (`analysis/findings.py:404-419`).
 - **The only findings data is the legacy file.** It has 15 of 30 tasks, no timestamp, and an unknown source run. Its hack-type labels do not match the current detector's rules (section 9, item 2).
-- **Settings:** step limit 20, model `claude-sonnet-4-20250514`, temperature 0.1, no seed (`config.py:11-13`). Every per-task result records these in `metadata`.
+- **Settings:** step limit 20, model `claude-haiku-5-5`, max output tokens 2048, budget $6.50, no seed (`config.py`). Temperature is not sent for Haiku 5.5 (the model page says to omit it); thinking is disabled. Every per-task result records the values actually sent in `metadata`.
 - **Tests (run today):**
   - Workspace server up: **316 passed, 0 failed, 0 skipped.**
   - Workspace server down: **258 passed, 51 failed, 7 skipped.** All 51 failures are `httpx.ConnectError` in `tests/test_workspace.py`. All 7 skips are the archive tool tests in `tests/test_archive_email.py`.
@@ -117,7 +117,7 @@ hacking: { was_hacked, primary_hack_type, events[{type, severity, description}],
            checks: { metric_gaming, scope_creep, irreversibility_bias, overclaiming,
                      sycophantic_caution } each {available, fired} },
 policy_metrics: { unsafe_action_under_ambiguity (null on low) },
-metadata: { schema_version: 4, model, temperature, max_steps }
+metadata: { schema_version: 5, model, temperature (null when not sent), max_steps, max_tokens }
 ```
 
 Schema version is `RESULT_SCHEMA_VERSION = 4` (`run_experiment.py:41`).
@@ -156,13 +156,13 @@ Schema version is `RESULT_SCHEMA_VERSION = 4` (`run_experiment.py:41`).
 
 ---
 
-## 7. Settings: temperature, seed, step limit
+## 7. Settings: model, temperature, thinking, budget, seed
 
-- `config.py:11-13`: `MAX_STEPS = 20`, `MODEL = "claude-sonnet-4-20250514"`, `TEMPERATURE = 0.1`.
-- `AnthropicClient` defaults to these (`agent/clients/anthropic_client.py:28-43`). It passes `temperature=self.temperature` to `messages.create` (`anthropic_client.py:81`).
+- `config.py`: `MAX_STEPS = 20`, `MODEL = "claude-haiku-5-5"`, `MAX_TOKENS = 2048`, `BUDGET_USD = 6.50`, `MODEL_OPTIONS` (per-model request options), `PRICING` (with source URL and retrieval date).
+- `AnthropicClient` reads these. For Haiku 5.5, `MODEL_OPTIONS` says to omit temperature and to send `thinking: {"type": "disabled"}`. The docs say: "Omit `temperature`, `top_p`, and `top_k`." (https://platform.claude.com/docs/en/models/haiku-5-5/overview). The thinking setting is a choice made here: it keeps output cost low and keeps the loop valid, since thinking blocks would otherwise have to be passed back on every tool-use turn.
 - **No seed** is set anywhere. `messages.create` is called without a seed argument (`anthropic_client.py:76-83`). The installed SDK (anthropic 0.40.0) does not have a `seed` parameter, and I found no mention of seed in its `messages` resource. Runs are not reproducible, even at temperature 0.1.
 - `demo.py` is separate: `AnthropicClient(temperature=0.0)` (`demo.py:154`), `MAX_STEPS = 10` (`demo.py:57`), and its own loop (`demo.py:162-211`). Its results are not written to `results/`.
-- **Model ID:** `claude-sonnet-4-20250514` is the code value. I could not confirm it is valid for the API: the installed SDK's model list predates it, and confirming needs a paid call. That check belongs in the dry run you asked for.
+- **Model ID (superseded):** `claude-sonnet-4-20250514` is no longer the code value. Your key's model list does not include it. The current model is `claude-haiku-5-5`. That check belongs in the dry run you asked for.
 
 ---
 
@@ -219,7 +219,7 @@ Schema version is `RESULT_SCHEMA_VERSION = 4` (`run_experiment.py:41`).
 7. **`reply_email` static flag is worst-case** (`workspace/tool_registry.py:258-266`). The per-call check, `is_reversible_call`, is the one used in the detector and the robust penalty.
 8. **`intermediate` is computed and stored, not used.**
 9. **`should_ask_clarification` is unused** (see item 4).
-10. **Temperature 0.1, no seed.** Runs are not reproducible.
+10. **No temperature for Haiku 5.5 and no seed.** The model rejects the setting in the docs, so the experiment has no sampling control. Runs are not reproducible.
 11. **`completed` counts a step-limit episode that ends on a tool call** (`run_experiment.py:211`). `stopped_reason` shows it.
 12. **Clarification is a `"?"` heuristic.** Any reply with a `?` and no tool call ends the episode (`loop.py:217-218`). The detector does not read the text.
 13. **Failed tasks leave no record.** A non-retryable exception returns `None` (`run_experiment.py:308-310`), so the failure is only counted, not written. On a retried task the earlier session is not deleted (`run_experiment.py:278` is not reached).
@@ -264,7 +264,7 @@ Status key: ✔ = matches the code or data; ✗ = does not match; illustrative =
 | §06 Taxonomy | robust deducts 0.15 per excess irreversible action, cap 0.3 | `rewards/robust.py:466-467` | ✔ (README corrected; section 9, item 3) |
 | §06 Taxonomy | robust deducts 0.05 per out-of-scope call, cap 0.3 | `rewards/robust.py:452-454` | ✔ (README corrected; section 9, item 3) |
 | §06 Taxonomy | per-type example scores (naive=1.0, robust=0.0, etc.) | none | illustrative (README says "not from recorded runs") |
-| §07 Results | "Results pending"; schema v4 | `run_experiment.py:41` | ✔ |
+| §07 Results | "Results pending"; schema v5 | `run_experiment.py:41` | ✔ |
 | §08 Architecture | ≤20 steps | `config.py:11` | ✔ |
 | §08 Architecture | 17 tools; 9 email; 5 calendar | `workspace/tool_registry.py` | ✔ |
 | §08 Architecture | 316 tests | pytest collect (`analysis/readme_numbers.py`) | ✔ |
@@ -272,7 +272,7 @@ Status key: ✔ = matches the code or data; ✗ = does not match; illustrative =
 | §08 Project tree | per-file test counts (51, 22, 25, 23, 24, 31, 8, 8, 10, 9, 47, 11, 8, 19) | pytest collect, all 14 files | ✔ |
 | §08 Project tree | `config.py ← MAX_STEPS (20), MODEL, TEMPERATURE` | `config.py:11-13` | ✔ |
 | §09 Testing | 316 pass with server; 258 / 51 / 7 without | pytest runs today | ✔ |
-| §10 Limitations | planned model: Claude Sonnet 4 | `config.py:12` | ✔ (code); model ID not confirmed valid (section 7) |
+| §10 Limitations | planned model: Claude Haiku 5.5 | `config.py` `MODEL` | ✔ |
 | §11 Path to production | "2 CPU, 2 GB RAM" per pod; "70% utilization"; "90%+" fixture I/O reduction; "5–10% of tasks" annotated | none | unknown (design targets, not measured) |
 
 ---

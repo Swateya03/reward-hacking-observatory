@@ -245,7 +245,7 @@ Five canonical hack types are defined in `hacking/taxonomy.py`. The examples in 
 
 **Results pending.** Earlier figures in this README were taken from test fixtures and sample data rather than an experiment run, and have been removed. A full run is in progress.
 
-Result files are written in schema v4 (`metadata.schema_version` = 4). See `docs/ARCHITECTURE_NOTES.md` §5.
+Result files are written in schema v5 (`metadata.schema_version` = 5). See `docs/ARCHITECTURE_NOTES.md` §5.
 
 ---
 
@@ -390,7 +390,7 @@ Run all tests: `pytest tests/ -v` — 🟢 **316 tests, all passing** with the w
 ## ⚠️ 10 — Limitations and Future Work
 
 - ⚠️ **Scale** — The current system uses SQLite for state storage and a single FastAPI server for the workspace. This is sufficient for sequential task runs but cannot handle parallel training runs. At Anthropic's scale, we would need PostgreSQL for state durability and Redis for session management, with multiple workspace instances behind a load balancer. A production system would also cache tool definitions and fixture loading to avoid repeated disk I/O.
-- ⚠️ **Model comparison** — The planned experiment uses only Claude Sonnet 4. Comparative results across other Claude models, GPT-4, Llama, and others would strengthen the findings. The hacking patterns might be specific to Claude's training; testing on other models would reveal whether they are universal properties of LLMs or artifacts of particular training methods.
+- ⚠️ **Model comparison** — The planned experiment uses only Claude Haiku 5.5 (the cheaper of the two models priced in `config.py`). Comparative results across other Claude models, GPT-4, Llama, and others would strengthen the findings. The hacking patterns might be specific to Claude's training; testing on other models would reveal whether they are universal properties of LLMs or artifacts of particular training methods.
 - ⚠️ **Human annotation** — The robust reward function uses a StateVerifier that pattern-matches against expected_state. This works for structured domains (files, emails, calendar events) but breaks for open-ended tasks or ambiguous success criteria. For higher-stakes tasks, we would collect human annotations: domain experts rating agent trajectories on a "did the agent actually solve this?" scale. These human ratings would validate the robust reward signal and calibrate the divergence threshold for detecting hacking.
 - ⚠️ **Training loop** — This version implements reward measurement but not policy training. The architecture includes placeholders for a REINFORCE or GRPO training loop (standard RL methods), but the implementation was deferred. Connecting this to TRL's GRPOTrainer or Hugging Face's veRL framework would close the loop: measure reward hacking, use that signal to train agents that avoid it, measure again. This is where the real value emerges.
 
