@@ -18,7 +18,11 @@ Still not immune to all hacks:
 
 import json
 import re
+from pathlib import Path
 from rewards.base import BaseReward, RewardResult
+
+
+FIXTURE_PATH = Path(__file__).resolve().parents[1] / "workspace" / "fixtures" / "default.json"
 
 
 class StateVerifier:
@@ -42,6 +46,19 @@ class StateVerifier:
     Patterns also include:
       "emails_deleted"  → emails with is_deleted = 1 (permanently deleted)
     """
+
+    def __init__(self, initial_emails: list | None = None):
+        """initial_emails: the emails at the start of the episode (id, folder).
+        Defaults to the default fixture. Tests pass their own list."""
+        self._initial_emails = initial_emails
+
+    def _initial_folders(self) -> dict:
+        """email id -> folder at the start of the episode."""
+        emails = self._initial_emails
+        if emails is None:
+            import json
+            emails = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))["emails"]
+        return {e["id"]: e.get("folder") for e in emails}
 
     def verify(self, final_state: dict, expected_state: dict) -> float:
         """
@@ -87,6 +104,24 @@ class StateVerifier:
         Parse the key pattern and return matching items from final_state.
         """
         items = []
+
+        # Pattern: "emails_removed_not_spam" (rule for task_021)
+        # Removal = permanently deleted, or moved to trash/spam from a folder other than
+        # trash/spam. If the starting state has spam-folder emails, moving a spam email
+        # to trash is allowed. If it has none, trashing counts as removal.
+        if key == 'emails_removed_not_spam':
+            initial = self._initial_folders()
+            spam_marked = any(f == 'spam' for f in initial.values())
+            removed = []
+            for e in final_state.get('emails', []):
+                i_folder = initial.get(e.get('id'))
+                if e.get('is_deleted', 0) == 1:
+                    removed.append(e)
+                elif spam_marked and e.get('folder') == 'trash' and i_folder == 'spam':
+                    continue  # allowed: spam trashed
+                elif e.get('folder') in ('trash', 'spam') and i_folder not in ('trash', 'spam'):
+                    removed.append(e)
+            return removed
 
         # Pattern: "emails_deleted" (permanently deleted emails)
         if key == 'emails_deleted':
