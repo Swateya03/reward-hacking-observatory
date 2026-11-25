@@ -1,7 +1,7 @@
 """Print every headline number quoted in README.md, computed from source data.
 
 Sources:
-  results/findings.json      experiment aggregates (the only result file in the repo)
+  results/legacy/findings_partial_run.json  legacy aggregates, source run unknown
   tasks/task_bank.json       task counts and expected_state
   workspace/tool_registry.py tool counts
   pytest --collect-only      unit/integration test counts (not experiment runs)
@@ -19,7 +19,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
-FINDINGS_PATH = REPO / "results" / "findings.json"
+FINDINGS_PATH = REPO / "results" / "legacy" / "findings_partial_run.json"  # legacy, source run unknown
 TASK_BANK_PATH = REPO / "tasks" / "task_bank.json"
 MODEL_DEFAULT = "claude-sonnet-4-20250514"  # from agent/clients/anthropic_client.py
 
@@ -32,43 +32,43 @@ def collect_values() -> list[tuple[str, str, str]]:
     """Return (key, value, source) rows."""
     rows = []
 
-    # ---- experiment aggregates: results/findings.json ----
+    # ---- experiment aggregates: results/legacy findings_partial_run.json ----
     f = json.loads(FINDINGS_PATH.read_text())
     o = f["overall"]
     completed, total = o["completed_tasks"], o["total_tasks"]
     rows += [
-        ("completed", f"{completed} of {total}", "findings.json overall"),
-        ("completion_rate", pct(o["completion_rate"]), "findings.json overall"),
-        ("avg_naive", f"{o['avg_naive']:.3f}", "findings.json overall"),
-        ("avg_robust", f"{o['avg_robust']:.3f}", "findings.json overall"),
-        ("avg_divergence", f"{o['avg_divergence']:+.3f}", "findings.json overall"),
-        ("hack_rate_divergence_gt_0.1", pct(o["hack_rate"]), "findings.json overall (divergence > 0.1)"),
+        ("completed", f"{completed} of {total}", "legacy findings_partial_run.json overall"),
+        ("completion_rate", pct(o["completion_rate"]), "legacy findings_partial_run.json overall"),
+        ("avg_naive", f"{o['avg_naive']:.3f}", "legacy findings_partial_run.json overall"),
+        ("avg_robust", f"{o['avg_robust']:.3f}", "legacy findings_partial_run.json overall"),
+        ("avg_divergence", f"{o['avg_divergence']:+.3f}", "legacy findings_partial_run.json overall"),
+        ("hack_rate_divergence_gt_0.1", pct(o["hack_rate"]), "legacy findings_partial_run.json overall (divergence > 0.1)"),
         ("naive_gt_robust", f"{round(o['naive_greater_than_robust_pct'] * completed)} of {completed} ({pct(o['naive_greater_than_robust_pct'])})",
-         "findings.json overall"),
+         "legacy findings_partial_run.json overall"),
     ]
     for level in ["low", "medium", "high"]:
         b = f["by_ambiguity"][level]
         rows += [
-            (f"{level}.n", str(b["count"]), "findings.json by_ambiguity"),
-            (f"{level}.hack_rate", pct(b["hack_rate"]), "findings.json by_ambiguity (divergence > 0.1)"),
-            (f"{level}.avg_divergence", f"{b['avg_divergence']:+.3f}", "findings.json by_ambiguity"),
-            (f"{level}.avg_naive", f"{b['avg_naive']:.3f}", "findings.json by_ambiguity"),
-            (f"{level}.avg_robust", f"{b['avg_robust']:.3f}", "findings.json by_ambiguity"),
+            (f"{level}.n", str(b["count"]), "legacy findings_partial_run.json by_ambiguity"),
+            (f"{level}.hack_rate", pct(b["hack_rate"]), "legacy findings_partial_run.json by_ambiguity (divergence > 0.1)"),
+            (f"{level}.avg_divergence", f"{b['avg_divergence']:+.3f}", "legacy findings_partial_run.json by_ambiguity"),
+            (f"{level}.avg_naive", f"{b['avg_naive']:.3f}", "legacy findings_partial_run.json by_ambiguity"),
+            (f"{level}.avg_robust", f"{b['avg_robust']:.3f}", "legacy findings_partial_run.json by_ambiguity"),
         ]
 
     counts = f["hack_types"]["counts"]
     total_events = sum(counts.values())
-    rows.append(("hack_events_total", str(total_events), "findings.json hack_types"))
+    rows.append(("hack_events_total", str(total_events), "legacy findings_partial_run.json hack_types"))
     for name, c in sorted(counts.items(), key=lambda x: -x[1]):
         share = f"{c} of {total_events} ({100 * c / total_events:.0f}%)" if total_events else "0"
-        rows.append((f"hack_type.{name}", share, "findings.json hack_types"))
+        rows.append((f"hack_type.{name}", share, "legacy findings_partial_run.json hack_types"))
 
     nc = f["notable_cases"]
     h, lo = nc["highest_divergence"], nc["lowest_divergence"]
     rows += [
-        ("highest_divergence", f"{h['task_id']} naive={h['naive']} robust={h['robust']} div={h['divergence']}", "findings.json notable_cases"),
-        ("lowest_divergence", f"{lo['task_id']} naive={lo['naive']} robust={lo['robust']} div={lo['divergence']}", "findings.json notable_cases"),
-        ("perfect_scores", ", ".join(nc["perfect_scores"]), "findings.json notable_cases"),
+        ("highest_divergence", f"{h['task_id']} naive={h['naive']} robust={h['robust']} div={h['divergence']}", "legacy findings_partial_run.json notable_cases"),
+        ("lowest_divergence", f"{lo['task_id']} naive={lo['naive']} robust={lo['robust']} div={lo['divergence']}", "legacy findings_partial_run.json notable_cases"),
+        ("perfect_scores", ", ".join(nc["perfect_scores"]), "legacy findings_partial_run.json notable_cases"),
     ]
 
     # ---- task bank: results/task bank, not run output ----
@@ -110,8 +110,8 @@ def collect_values() -> list[tuple[str, str, str]]:
 
     # ---- provenance ----
     rows += [
-        ("run.date", "unknown", "findings.json has no timestamp; no run_summary.json in repo"),
-        ("run.model", f"{MODEL_DEFAULT} (per code; not recorded in findings.json)", "agent/clients/anthropic_client.py"),
+        ("run.date", "unknown", "legacy findings_partial_run.json has no timestamp; no run_summary.json in repo"),
+        ("run.model", f"{MODEL_DEFAULT} (per code; not recorded in legacy findings_partial_run.json)", "agent/clients/anthropic_client.py"),
         ("run.step_limit", "unknown (code default is 20)", "agent/loop.py, run_experiment.py"),
     ]
     return rows
