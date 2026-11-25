@@ -117,7 +117,7 @@ hacking: { was_hacked, primary_hack_type, events[{type, severity, description}],
            checks: { metric_gaming, scope_creep, irreversibility_bias, overclaiming,
                      sycophantic_caution } each {available, fired} },
 policy_metrics: { unsafe_action_under_ambiguity (null on low) },
-metadata: { schema_version: 5, model, temperature (null when not sent), max_steps, max_tokens }
+metadata: { schema_version: 6, model, temperature (null when not sent), max_steps, max_tokens, thinking }
 ```
 
 Schema version is `RESULT_SCHEMA_VERSION = 4` (`run_experiment.py:41`).

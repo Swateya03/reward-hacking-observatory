@@ -148,7 +148,7 @@ def client(tmp_path):
         yield c
 
 
-def test_cache_control_is_sent_on_tools_system_block_and_last_block(client):
+def test_cache_control_is_sent_on_tools_system_and_last_block(client):
     client.sdk.messages.create.return_value = _fake_response()
     messages = _loop_messages("Delete old files")
     client.call(messages, TOOLS, step=1)
@@ -156,9 +156,9 @@ def test_cache_control_is_sent_on_tools_system_block_and_last_block(client):
     kwargs = client.sdk.messages.create.call_args.kwargs
     assert kwargs["tools"][-1]["cache_control"] == {"type": "ephemeral"}
     assert "cache_control" not in kwargs["tools"][0]
+    assert kwargs["system"][0]["cache_control"] == {"type": "ephemeral"}
     first = kwargs["messages"][0]["content"]
-    assert first[0]["cache_control"] == {"type": "ephemeral"}          # the system prompt block
-    assert "cache_control" not in first[1]                              # the task text is not a breakpoint
+    assert all("cache_control" not in b for b in first)                # the task text is not a breakpoint
     last = kwargs["messages"][-1]["content"]
     assert last[-1]["cache_control"] == {"type": "ephemeral"}
 
@@ -166,23 +166,29 @@ def test_cache_control_is_sent_on_tools_system_block_and_last_block(client):
 def test_at_most_three_cache_breakpoints_are_sent(client):
     client.sdk.messages.create.return_value = _fake_response()
     messages = [
-        {"role": "user", "content": [{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]},
+        {"role": "system", "content": "sys"},
+        {"role": "user", "content": "task"},
         {"role": "assistant", "content": [{"type": "text", "text": "c"}]},
         {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "1", "content": "{}"}]},
     ]
     client.call(messages, TOOLS, step=2)
     kwargs = client.sdk.messages.create.call_args.kwargs
-    blocks = [kwargs["tools"][-1]] + [b for m in kwargs["messages"] for b in m["content"]]
+    blocks = [kwargs["tools"][-1], kwargs["system"][0]] + [b for m in kwargs["messages"] for b in m["content"]]
     assert sum("cache_control" in b for b in blocks) == 3
 
 
-def test_prompt_text_is_unchanged_by_the_block_split(client):
+def test_system_prompt_is_sent_once_and_only_in_the_system_parameter(client):
     client.sdk.messages.create.return_value = _fake_response()
     messages = _loop_messages("Delete old files")
     client.call(messages, TOOLS, step=1)
-    first = client.sdk.messages.create.call_args.kwargs["messages"][0]["content"]
-    joined = "".join(b["text"] for b in first)
-    assert joined == f"{SYSTEM_PROMPT}\n\nYour task: Delete old files"
+    kwargs = client.sdk.messages.create.call_args.kwargs
+    assert kwargs["system"][0]["text"] == SYSTEM_PROMPT
+    assert "system" not in [m["role"] for m in kwargs["messages"]]
+    request_text = json.dumps(kwargs["messages"]) + json.dumps(kwargs["system"])
+    assert request_text.count(SYSTEM_PROMPT[:60]) == 1
+    content = kwargs["messages"][0]["content"]
+    user_text = content if isinstance(content, str) else "".join(x["text"] for x in content)
+    assert user_text == "Your task: Delete old files"
 
 
 def test_usage_is_logged_after_the_call(client):
@@ -239,3 +245,29 @@ def test_haiku_4_5_request_sends_temperature_and_no_thinking_option(tmp_path):
         kwargs = sdk.messages.create.call_args.kwargs
     assert kwargs["temperature"] == config.TEMPERATURE
     assert "thinking" not in kwargs
+
+
+# ── per-run cap ──────────────────────────────────────────────────────────────
+
+def test_run_cap_stops_a_run_while_the_overall_cap_has_room(tmp_path):
+    t = CostTracker("claude-haiku-5-5", log_path=tmp_path / "l.jsonl", budget=6.5)
+    t.set_run("run_01", run_budget=1e-6)
+    with pytest.raises(BudgetExceeded) as exc:
+        t.guard(est_input_tokens=5000, max_tokens=2048)
+    assert exc.value.scope == "run"
+    assert exc.value.run_id == "run_01"
+
+
+def test_run_totals_are_separate_and_resume_per_run(tmp_path):
+    log = tmp_path / "l.jsonl"
+    a = CostTracker("claude-haiku-5-5", log_path=log, budget=6.5)
+    a.set_run("run_01")
+    a.record(step=1, usage=_usage(inp=10_000, out=1000))
+    a_total = a.run_total_usd
+    b = CostTracker("claude-haiku-5-5", log_path=log, budget=6.5)
+    b.set_run("run_02")
+    assert b.run_total_usd == 0.0                       # run_02 has spent nothing yet
+    assert b.total_usd == pytest.approx(a.total_usd)    # overall total still counts run_01
+    c = CostTracker("claude-haiku-5-5", log_path=log, budget=6.5)
+    c.set_run("run_01")
+    assert c.run_total_usd == pytest.approx(a_total, abs=1e-7)

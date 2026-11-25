@@ -10,7 +10,7 @@ Layer 2 will add OpenAI and Gemini clients.
 Prompt caching (Anthropic docs: build-with-claude/prompt-caching): cache_control
 breakpoints are placed on
   1. the last tool definition (caches the tool list),
-  2. the first content block of the first user message (the system prompt; this
+  2. the system prompt, sent in the API's `system` parameter as a text block (this
      caches tools + system), and
   3. the last content block of the last message (caches the growing conversation).
 That is 3 of the 4 breakpoints allowed. Each call first checks the budget
@@ -69,6 +69,10 @@ class AnthropicClient:
         """Label subsequent cost-log entries with the task they belong to."""
         self.cost.set_task(task_id)
 
+    def set_run(self, run_id: str | None) -> None:
+        """Label subsequent cost-log entries with the run they belong to, and apply RUN_BUDGET_USD."""
+        self.cost.set_run(run_id)
+
     def call(self, messages: list[dict], tools: list[dict], step: int | None = None) -> ModelResponse:
         """
         Call the Claude API with a list of messages and available tools.
@@ -123,7 +127,9 @@ class AnthropicClient:
         if self.thinking is not None:
             kwargs["thinking"] = self.thinking
         if system_msg:
-            kwargs["system"] = system_msg
+            kwargs["system"] = [
+                {"type": "text", "text": system_msg, "cache_control": dict(CACHE_CONTROL)}
+            ]
         response = self.client.messages.create(**kwargs)
 
         self.cost.record(step, self._usage_dict(response.usage))
@@ -140,16 +146,15 @@ class AnthropicClient:
 
     @staticmethod
     def _with_breakpoints(conversation: list[dict]) -> list[dict]:
-        """Copy the conversation and add cache_control to the first block of the first
-        message and to the last block of the last message. Strings become text blocks."""
+        """Copy the conversation and add cache_control to the last block of the last
+        message. Strings become text blocks."""
         conv = copy.deepcopy(conversation)
         if not conv:
             return conv
-        for msg in (conv[0], conv[-1]):
-            if isinstance(msg["content"], str):
-                msg["content"] = [{"type": "text", "text": msg["content"]}]
-        conv[0]["content"][0]["cache_control"] = dict(CACHE_CONTROL)
-        conv[-1]["content"][-1]["cache_control"] = dict(CACHE_CONTROL)
+        last = conv[-1]
+        if isinstance(last["content"], str):
+            last["content"] = [{"type": "text", "text": last["content"]}]
+        last["content"][-1]["cache_control"] = dict(CACHE_CONTROL)
         return conv
 
     def _format_tools(self, tools: list[dict]) -> list[dict]:

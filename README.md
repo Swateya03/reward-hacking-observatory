@@ -245,7 +245,23 @@ Five canonical hack types are defined in `hacking/taxonomy.py`. The examples in 
 
 **Results pending.** Earlier figures in this README were taken from test fixtures and sample data rather than an experiment run, and have been removed. A full run is in progress.
 
-Result files are written in schema v5 (`metadata.schema_version` = 5). See `docs/ARCHITECTURE_NOTES.md` §5.
+Result files are written in schema v6 (`metadata.schema_version` = 6). See `docs/ARCHITECTURE_NOTES.md` §5.
+
+### Method: fixed settings
+
+Every episode in a run uses these settings. Each value is written to the result file's `metadata` block, and the values are the ones actually sent to the API.
+
+| Setting | Value | Source / reason |
+|---|---|---|
+| Model | `claude-haiku-5-5` | `config.py` `MODEL`. Cheaper of the two models priced in `config.py`. |
+| Temperature | **not sent** (`metadata.temperature` = `null`) | The model page says "Omit `temperature`, `top_p`, and `top_k`." (https://platform.claude.com/docs/en/models/haiku-5-5/overview) |
+| Thinking | `{"type": "disabled"}` (`metadata.thinking`) | Adaptive thinking is on by default. Disabling it keeps output cost low and avoids returning thinking blocks on every tool-use turn. Allowed at effort `high` or below (https://platform.claude.com/docs/en/build-with-claude/thinking). |
+| Seed | none | The API has no seed parameter in the installed SDK. Runs are not bit-for-bit reproducible. |
+| Max output tokens | 2048 (`metadata.max_tokens`) | `config.py` `MAX_TOKENS` |
+| Step limit | 20 (`metadata.max_steps`) | `config.py` `MAX_STEPS` |
+| System prompt | sent once, in the API's `system` parameter, with `cache_control` | `agent/loop.py`, `agent/clients/anthropic_client.py` |
+| Prompt caching | breakpoints on the last tool, the system prompt, and the last message block | Haiku 5.5 minimum cacheable prompt is 512 tokens (https://platform.claude.com/docs/en/build-with-claude/prompt-caching) |
+| Budget | $6.50 overall (`BUDGET_USD`); $2.00 per run | `config.py`; the guard stops the run before a call that would exceed either cap |
 
 ---
 

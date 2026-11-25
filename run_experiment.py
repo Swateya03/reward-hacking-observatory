@@ -39,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TASK_BANK_PATH = "tasks/task_bank.json"
-RESULT_SCHEMA_VERSION = 5   # v5: metadata.max_tokens; v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
+RESULT_SCHEMA_VERSION = 6   # v6: metadata.thinking (the setting sent; null if none); v5: metadata.max_tokens; v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
 
 
 def parse_args():
@@ -74,6 +74,13 @@ def parse_args():
         "--resume",
         action="store_true",
         help="Skip tasks that already have results files (resume after interruption)"
+    )
+    parser.add_argument(
+        "--run-index",
+        type=int,
+        default=None,
+        help="Run number k (1-based). Writes to results/runs/<model>/run_0k/ unless --output-dir is "
+             "given, and applies config.RUN_BUDGET_USD to this run's spend."
     )
     parser.add_argument(
         "--task-ids",
@@ -199,6 +206,7 @@ def build_result(
     temperature: float,
     max_steps: int,
     max_tokens: int = MAX_TOKENS,
+    thinking: dict | None = None,
 ) -> dict:
     """Build the JSON record written to results/<task_id>.json.
 
@@ -229,6 +237,7 @@ def build_result(
             "temperature": temperature,
             "max_steps": max_steps,
             "max_tokens": max_tokens,
+            "thinking": thinking,
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -294,6 +303,7 @@ def run_task(
                 temperature=model_client.temperature,
                 max_steps=max_steps,
                 max_tokens=model_client.max_tokens,
+                thinking=model_client.thinking,
             )
 
             # Store hacking events for reporting
@@ -505,6 +515,13 @@ def main():
             print(f"  {task.id:12} | {task.ambiguity_level:6} | {task.prompt[:50]}")
         return
 
+    # A numbered run gets its own directory, unless the output directory was set explicitly
+    run_id = None
+    if args.run_index is not None:
+        run_id = f"run_{args.run_index:02d}"
+        if args.output_dir == "results/":
+            args.output_dir = str(Path("results") / "runs" / MODEL / run_id)
+
     # Create output directory
     ensure_output_dir(args.output_dir)
 
@@ -519,6 +536,8 @@ def main():
 
     # Initialise clients
     model_client = AnthropicClient()
+    if run_id is not None:
+        model_client.set_run(run_id)
     workspace_client = WorkspaceClient()
     run_config = {
         "model": model_client.model,
@@ -550,9 +569,10 @@ def main():
             result = run_task(task, model_client, workspace_client, args.max_steps)
         except BudgetExceeded as e:
             budget_stop = e
-            print(f"\nBUDGET GUARD: stopped before {e.task_id or task.id}, step {e.step}. "
-                  f"Running total ${e.running_total:.4f}; next call could cost up to ${e.worst_case:.4f}; "
-                  f"budget ${e.budget:.2f}. Completed episodes are saved in {args.output_dir}.")
+            print(f"\nBUDGET GUARD ({e.scope} cap): stopped before {e.task_id or task.id}, step {e.step}. "
+                  f"Spent so far ${e.running_total:.4f}; next call could cost up to ${e.worst_case:.4f}; "
+                  f"cap ${e.budget:.2f}. Completed episodes are saved in {args.output_dir}. "
+                  f"Re-run with --resume to continue.")
             break
 
         if result:

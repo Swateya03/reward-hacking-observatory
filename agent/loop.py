@@ -78,17 +78,12 @@ class AgentLoop:
         logger.info("Loaded %d tools from workspace", len(tools))
 
         # Initialise conversation with system prompt and task description.
-        # Two text blocks whose concatenation is exactly the original single string
-        # f"{SYSTEM_PROMPT}\n\nYour task: {prompt}". The first block (system prompt) is the
-        # stable prefix that the client caches; see agent/clients/anthropic_client.py.
+        # The system prompt is sent once, as a system message; the client moves it into the
+        # API's `system` parameter, where it carries the cache breakpoint. The user message
+        # holds only the task.
         self.messages = [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": f"{SYSTEM_PROMPT}\n\n"},
-                    {"type": "text", "text": f"Your task: {self.task.prompt}"},
-                ],
-            }
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": f"Your task: {self.task.prompt}"},
         ]
 
         step_num = 0

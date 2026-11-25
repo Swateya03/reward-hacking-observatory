@@ -19,17 +19,21 @@ import config
 
 
 class BudgetExceeded(RuntimeError):
-    """Raised before a call that would take the running total over the budget."""
+    """Raised before a call that would take a total over its cap.
+    scope is "overall" (config.BUDGET_USD) or "run" (config.RUN_BUDGET_USD)."""
 
     def __init__(self, running_total: float, worst_case: float, budget: float,
-                 task_id: str | None = None, step: int | None = None):
+                 task_id: str | None = None, step: int | None = None,
+                 scope: str = "overall", run_id: str | None = None):
         self.running_total = running_total
         self.worst_case = worst_case
         self.budget = budget
         self.task_id = task_id
         self.step = step
+        self.scope = scope
+        self.run_id = run_id
         super().__init__(
-            f"budget guard: running total ${running_total:.6f} + worst case ${worst_case:.6f} "
+            f"budget guard ({scope}): running total ${running_total:.6f} + worst case ${worst_case:.6f} "
             f"would exceed ${budget:.2f}"
         )
 
@@ -67,41 +71,66 @@ def worst_case_cost(model: str, est_input_tokens: int, max_tokens: int) -> float
 
 
 class CostTracker:
-    def __init__(self, model: str, log_path: Path | None = None, budget: float = config.BUDGET_USD):
+    def __init__(self, model: str, log_path: Path | None = None, budget: float = config.BUDGET_USD,
+                 run_id: str | None = None, run_budget: float = config.RUN_BUDGET_USD):
         if model not in config.PRICING:
             raise ValueError(f"no pricing in config.PRICING for model {model!r}")
         self.model = model
         self.budget = budget
         self.log_path = Path(log_path) if log_path else default_log_path(model)
-        self.total_usd = 0.0
+        self.total_usd = 0.0          # all runs, from the log
+        self.run_total_usd = 0.0      # this run only
         self.calls = 0
         self.task_id = None
+        self.run_id = run_id
+        self.run_budget = run_budget
         if self.log_path.exists():
             for line in self.log_path.read_text(encoding="utf-8").splitlines():
                 if line.strip():
                     entry = json.loads(line)
                     self.total_usd = entry["running_total_usd"]
                     self.calls += 1
+                    if self.run_id is not None and entry.get("run_id") == self.run_id:
+                        self.run_total_usd += entry["cost_usd"]
 
     def set_task(self, task_id: str | None) -> None:
         self.task_id = task_id
 
+    def set_run(self, run_id: str | None, run_budget: float = config.RUN_BUDGET_USD) -> None:
+        """Start labelling entries with run_id. The run total is read from the log, so a
+        resumed run continues its own count."""
+        self.run_id = run_id
+        self.run_budget = run_budget
+        self.run_total_usd = 0.0
+        if run_id is not None and self.log_path.exists():
+            for line in self.log_path.read_text(encoding="utf-8").splitlines():
+                if line.strip():
+                    entry = json.loads(line)
+                    if entry.get("run_id") == run_id:
+                        self.run_total_usd += entry["cost_usd"]
+
     def guard(self, est_input_tokens: int, max_tokens: int, step: int | None = None) -> float:
-        """Raise BudgetExceeded if one more call could take the total over budget.
-        Returns the worst-case cost of that call."""
+        """Raise BudgetExceeded if one more call could take the overall total over
+        BUDGET_USD, or this run's total over RUN_BUDGET_USD. Returns the worst-case cost."""
         worst = worst_case_cost(self.model, est_input_tokens, max_tokens)
         if self.total_usd + worst > self.budget:
-            raise BudgetExceeded(self.total_usd, worst, self.budget, task_id=self.task_id, step=step)
+            raise BudgetExceeded(self.total_usd, worst, self.budget, task_id=self.task_id, step=step,
+                                 scope="overall", run_id=self.run_id)
+        if self.run_id is not None and self.run_total_usd + worst > self.run_budget:
+            raise BudgetExceeded(self.run_total_usd, worst, self.run_budget, task_id=self.task_id,
+                                 step=step, scope="run", run_id=self.run_id)
         return worst
 
     def record(self, step: int | None, usage: dict) -> dict:
         """Log one call. usage is the dict of usage fields from the response."""
         cost = cost_of_usage(self.model, usage)
         self.total_usd += cost
+        self.run_total_usd += cost
         self.calls += 1
         entry = {
             "ts": datetime.now(timezone.utc).isoformat(),
             "model": self.model,
+            "run_id": self.run_id,
             "task_id": self.task_id,
             "step": step,
             "input_tokens": usage.get("input_tokens") or 0,

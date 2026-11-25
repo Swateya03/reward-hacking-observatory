@@ -18,6 +18,8 @@ MAX_TOKENS = 2048                       # max output tokens per API response; re
 # Before each call the client adds the worst-case cost of that call; if the total would exceed
 # this cap, the run stops cleanly (agent/cost.py, BudgetExceeded).
 BUDGET_USD = 6.50
+# Cap for one run (one pass over the task bank, e.g. run_01). Checked alongside BUDGET_USD.
+RUN_BUDGET_USD = 2.00
 
 # ── Pricing ───────────────────────────────────────────────────────────────────
 # USD per million tokens. Source: https://platform.claude.com/docs/en/about-claude/pricing
