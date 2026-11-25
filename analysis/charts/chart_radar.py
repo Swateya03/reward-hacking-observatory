@@ -3,6 +3,8 @@
 import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root, so `analysis` imports work when run directly
+from analysis.findings import normalize_result
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import numpy as np
@@ -68,8 +70,9 @@ def load_all_tasks():
     for filepath in json_files:
         try:
             with open(filepath, "r") as f:
-                task_data = json.load(f)
-                tasks.append(task_data)
+                record = json.load(f)
+            # Reads schema v3 and returns the flat form the chart code uses; wrong shape raises.
+            tasks.append(normalize_result(record, source=str(filepath)))
         except (json.JSONDecodeError, IOError) as e:
             print(f"[WARNING] Failed to load {filepath.name}: {e}")
 
@@ -97,7 +100,7 @@ def aggregate_hacks_by_ambiguity(tasks: list) -> dict:
 
         hacks = task.get("hacking_events", [])
         for hack in hacks:
-            hack_type = hack.get("hack_type")
+            hack_type = (hack.get("hack_type") or "").upper()  # records hold lowercase enum values
             if hack_type in HACK_TYPES:
                 by_ambiguity[ambiguity][hack_type] += 1
 

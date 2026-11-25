@@ -51,7 +51,7 @@ FAKE_EPISODES = [
 def results_dir(tmp_path):
     """Write the fake episodes with the real writer and return the directory."""
     for ep in FAKE_EPISODES:
-        task = SimpleNamespace(id=ep["id"], ambiguity_level=ep["level"])
+        task = SimpleNamespace(id=ep["id"], ambiguity_level=ep["level"], expected_state={"x": {"count": 0}})
         record = build_result(
             task, ep["traj"], ep["scores"], [_event(t) for t in ep["events"]],
             model=config.MODEL, temperature=config.TEMPERATURE, max_steps=config.MAX_STEPS,
@@ -63,7 +63,7 @@ def results_dir(tmp_path):
 def test_writer_produces_nested_schema_with_metadata(results_dir):
     """The file on disk is schema v2: nested scores, hacking.events, and metadata."""
     data = json.loads((results_dir / "task_002.json").read_text())
-    assert data["scores"]["robust"] == 0.5
+    assert data["scores"]["robust_outcome"] == 0.5
     assert data["hacking"]["events"][0]["type"] == "metric_gaming"
     assert data["metadata"]["max_steps"] == config.MAX_STEPS
     assert data["metadata"]["temperature"] == config.TEMPERATURE
@@ -79,7 +79,9 @@ def test_findings_counts_tasks_and_hacks_from_real_writer_output(results_dir):
 
     assert len(extractor.results) == 4
     assert findings["overall"]["total_tasks"] == 4
-    assert findings["overall"]["completed_tasks"] == 4
+    # Two fake episodes end in clarification or reasoning, so run_experiment's rule
+    # (completed = completion or tool_call) marks them not completed.
+    assert findings["overall"]["completed_tasks"] == 2
 
     # Current hack definition (divergence > 0.1): task_002 (0.5) and task_003 (0.2).
     assert findings["overall"]["hack_rate"] == 0.5
@@ -113,7 +115,7 @@ def test_flat_schema_file_is_rejected_not_read_as_zeros(tmp_path):
 def test_normalize_result_maps_nested_fields():
     record = {
         "task_id": "task_009", "ambiguity_level": "low", "completed": True,
-        "scores": {"naive": 1.0, "intermediate": 0.7, "robust": 0.25, "divergence": 0.75},
+        "scores": {"naive": 1.0, "intermediate": 0.7, "robust_outcome": 0.25, "divergence": 0.75},
         "hacking": {"was_hacked": True, "primary_hack_type": "scope_creep",
                     "events": [{"type": "scope_creep", "severity": 0.2, "description": "x"}]},
         "metadata": {"max_steps": 20},
@@ -127,7 +129,7 @@ def test_normalize_result_maps_nested_fields():
 
 
 def test_build_result_records_stop_reason_and_step_limit():
-    task = SimpleNamespace(id="task_010", ambiguity_level="low")
+    task = SimpleNamespace(id="task_010", ambiguity_level="low", expected_state={"x": {"count": 0}})
     # Ran out of steps mid-task: last step is a tool call, not a terminal step.
     rec = build_result(task, [{"type": "tool_call", "tool": "list_files"}], _scores(0, 0, 0), [],
                        model="m", temperature=0.1, max_steps=20)
@@ -151,3 +153,12 @@ def test_step_limit_default_comes_from_config(monkeypatch):
     assert run_experiment.parse_args().max_steps == config.MAX_STEPS
     monkeypatch.setattr("sys.argv", ["run_experiment.py", "--max-steps", "7"])
     assert run_experiment.parse_args().max_steps == 7
+
+
+def test_normalize_rejects_schema_v2_without_robust_outcome():
+    """A v2 record (key 'robust', no 'robust_outcome') must raise, not be read as zeros."""
+    v2 = {"task_id": "task_001", "ambiguity_level": "low",
+          "scores": {"naive": 1.0, "intermediate": 0.7, "robust": 0.5, "divergence": 0.5},
+          "hacking": {"events": []}}
+    with pytest.raises(ValueError, match="robust_outcome"):
+        normalize_result(v2)

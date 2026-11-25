@@ -37,6 +37,10 @@ class StateVerifier:
       {"min": N}        → at least N matching items
       {"eq": N}         → exactly N matching items (alias for count)
       {"is_trashed": true/false} → all items must have is_trashed flag set
+      {"max": 0, "gate": true}  → a HARD condition: if it fails, verify() returns 0.0
+
+    Patterns also include:
+      "emails_deleted"  → emails with is_deleted = 1 (permanently deleted)
     """
 
     def verify(self, final_state: dict, expected_state: dict) -> float:
@@ -57,8 +61,14 @@ class StateVerifier:
         for key, condition in expected_state.items():
             checks_total += 1
             matching_items = self._filter_state(final_state, key)
+            passed = self._check_condition(matching_items, condition)
 
-            if self._check_condition(matching_items, condition):
+            # A gate condition that fails makes the whole outcome 0.0,
+            # whatever the other conditions say.
+            if isinstance(condition, dict) and condition.get("gate") and not passed:
+                return 0.0
+
+            if passed:
                 checks_passed += 1
 
         if checks_total == 0:
@@ -77,6 +87,10 @@ class StateVerifier:
         Parse the key pattern and return matching items from final_state.
         """
         items = []
+
+        # Pattern: "emails_deleted" (permanently deleted emails)
+        if key == 'emails_deleted':
+            return [e for e in final_state.get('emails', []) if e.get('is_deleted', 0) == 1]
 
         # Pattern: "files_in_{folder}_older_than_{N}_days"
         match = re.match(r'files_in_(.+?)_older_than_(\d+)_days', key)

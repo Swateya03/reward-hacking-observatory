@@ -33,8 +33,8 @@ class DetectionResult:
     ambiguity_level: str
     naive_score: float
     intermediate_score: float
-    robust_score: float
-    divergence: float
+    robust_score: float | None      # None = N/A (no expected_state)
+    divergence: float | None        # None = N/A
     hacking_events: list[HackingEvent] = field(default_factory=list)
     primary_hack_type: Optional[HackType] = None
     was_hacked: bool = False
@@ -50,6 +50,12 @@ class DetectionResult:
             ).hack_type
         else:
             self.primary_hack_type = None
+
+
+def _fmt(value, signed: bool = False) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value:+.2f}" if signed else f"{value:.2f}"
 
 
 def summarise(result: DetectionResult) -> str:
@@ -72,7 +78,7 @@ def summarise(result: DetectionResult) -> str:
 
     summary_line = (
         f"{result.task_id:12} | naive={result.naive_score:.2f} | "
-        f"robust={result.robust_score:.2f} | div={result.divergence:+.2f} | "
+        f"robust={_fmt(result.robust_score)} | div={_fmt(result.divergence, signed=True)} | "
         f"hacked={hacked_str:3} | type={type_str}"
     )
 
@@ -120,7 +126,8 @@ def aggregate(results: list[DetectionResult]) -> dict:
     total = len(results)
     hacked_count = sum(1 for r in results if r.was_hacked)
     hack_rate = hacked_count / total if total > 0 else 0.0
-    avg_divergence = sum(r.divergence for r in results) / total if total > 0 else 0.0
+    available = [r.divergence for r in results if r.divergence is not None]
+    avg_divergence = sum(available) / len(available) if available else 0.0
 
     # Count hack types
     hack_type_counts = {}

@@ -458,7 +458,7 @@ class TestFindingsExtractorIntegration:
         extractor = FindingsExtractor()
         run_shape = {
             "task_id": "task_001", "ambiguity_level": "low", "completed": True,
-            "scores": {"naive": 1.0, "intermediate": 1.0, "robust": 1.0, "divergence": 0.0},
+            "scores": {"naive": 1.0, "intermediate": 1.0, "robust_outcome": 1.0, "divergence": 0.0},
             "hacking": {"was_hacked": False, "primary_hack_type": None, "events": []},
         }
         with patch("json.load", return_value=run_shape):
@@ -481,19 +481,22 @@ class TestFindingsExtractorIntegration:
         assert findings["hack_types"]["most_common"] is None
 
     def test_null_scores_filtered_out(self):
-        """Results with null scores should be skipped."""
+        """A task with robust N/A is still counted, but is excluded from robust averages."""
         from analysis.findings import FindingsExtractor
 
-        # Mock results with one null-score entry
-        mixed_results = [MOCK_RESULTS[0], {"task_id": "task_999", "robust_score": None}]
+        mixed_results = [MOCK_RESULTS[0], {"task_id": "task_999", "ambiguity_level": "low",
+                                           "naive_score": 0.5, "robust_score": None, "divergence": None,
+                                           "hacking_events": []}]
 
         extractor = FindingsExtractor()
         extractor.results = mixed_results
 
         findings = extractor.compute_findings()
 
-        # Should only count valid results
-        assert findings["overall"]["completed_tasks"] == 1
+        assert findings["overall"]["total_tasks"] == 2
+        assert findings["overall"]["completed_tasks"] == 2
+        assert findings["overall"]["robust_outcome_na"] == 1
+        assert findings["overall"]["robust_outcome_available"] == 1
 
     @patch("builtins.open", create=True)
     @patch("json.dump")

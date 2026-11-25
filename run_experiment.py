@@ -14,7 +14,7 @@ import json
 import logging
 import sys
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -27,6 +27,8 @@ from rewards.scorer import Scorer
 from hacking.detector import HackingDetector
 from hacking.report import DetectionResult, print_report, aggregate
 from config import MAX_STEPS, MODEL, TEMPERATURE
+from hacking.unsafe_action import unsafe_action_under_ambiguity
+from rewards.outcome import robust_outcome_available
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,7 +37,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TASK_BANK_PATH = "tasks/task_bank.json"
-RESULT_SCHEMA_VERSION = 2   # nested scores/hacking + metadata block (v1 had neither metadata nor stopped_reason)
+RESULT_SCHEMA_VERSION = 3   # v3: robust_outcome and divergence are null when N/A; policy_metrics block
 
 
 def parse_args():
@@ -119,13 +121,33 @@ def task_already_completed(task_id: str, output_dir: str) -> bool:
     return result_path.exists()
 
 
-def summarise_scores(scores: dict) -> dict:
-    """Flatten the Scorer output into the plain numbers stored in a result file."""
+def fmt(value, signed: bool = False) -> str:
+    """Format a score for printing; N/A for None."""
+    if value is None:
+        return "N/A"
+    return f"{value:+.2f}" if signed else f"{value:.2f}"
+
+
+def mean_available(values: list) -> float:
+    """Mean of the non-None values; 0.0 if none are available."""
+    present = [v for v in values if v is not None]
+    return sum(present) / len(present) if present else 0.0
+
+
+def summarise_scores(scores: dict, task=None) -> dict:
+    """Flatten the Scorer output into the plain numbers stored in a result file.
+
+    robust_outcome and divergence are null (N/A) when the task has no
+    expected_state, because there is no outcome to check. They are never
+    filled with a constant. Without a task, both are treated as available.
+    """
+    available = True if task is None else robust_outcome_available(task)
     return {
         "naive": round(scores["naive"].score, 3),
         "intermediate": round(scores["intermediate"].score, 3),
-        "robust": round(scores["robust"].score, 3),
-        "divergence": scores["divergence"],
+        "robust_outcome": round(scores["robust"].score, 3) if available else None,
+        "divergence": scores["divergence"] if available else None,
+        "robust_outcome_available": available,
     }
 
 
@@ -176,15 +198,18 @@ def build_result(
         "completed": completion_type in ("completion", "tool_call"),
         "completion_type": completion_type,
         "stopped_reason": stopped_reason,
-        "scores": summarise_scores(scores),
+        "scores": summarise_scores(scores, task),
         "hacking": summarise_hacking(hacking_events),
+        "policy_metrics": {
+            "unsafe_action_under_ambiguity": unsafe_action_under_ambiguity(trajectory, task.ambiguity_level),
+        },
         "metadata": {
             "schema_version": RESULT_SCHEMA_VERSION,
             "model": model,
             "temperature": temperature,
             "max_steps": max_steps,
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -248,9 +273,9 @@ def run_task(
             result["_hacking_events"] = hacking_events
 
             logger.info(
-                "Task completed: %s (steps=%d, tools=%d, naive=%.2f, robust=%.2f, divergence=%.2f)",
+                "Task completed: %s (steps=%d, tools=%d, naive=%.2f, robust_outcome=%s, divergence=%s)",
                 task.id, result["step_count"], result["tool_call_count"],
-                result["scores"]["naive"], result["scores"]["robust"], result["scores"]["divergence"]
+                result["scores"]["naive"], fmt(result["scores"]["robust_outcome"]), fmt(result["scores"]["divergence"], signed=True)
             )
             return result
 
@@ -297,11 +322,11 @@ def print_task_result(result: dict):
     ambiguity = result["ambiguity_level"]
     steps = result["step_count"]
     naive = result["scores"]["naive"]
-    robust = result["scores"]["robust"]
+    robust = result["scores"]["robust_outcome"]
     hacked = "YES" if result["hacking"]["was_hacked"] else "NO"
     hack_type = result["hacking"]["primary_hack_type"] or "NONE"
 
-    print(f"{task_id:12} | {ambiguity:6} | {steps:2} | naive={naive:.2f} | robust={robust:.2f} | hacked={hacked:3} | type={hack_type}")
+    print(f"{task_id:12} | {ambiguity:6} | {steps:2} | naive={naive:.2f} | robust={fmt(robust)} | hacked={hacked:3} | type={hack_type}")
 
 
 def save_run_summary(results: list[dict], output_dir: str, total_tasks: int, failed_count: int, skipped_count: int, run_config: dict):
@@ -312,8 +337,8 @@ def save_run_summary(results: list[dict], output_dir: str, total_tasks: int, fai
 
     # Calculate statistics
     avg_naive = sum(r["scores"]["naive"] for r in results) / len(results) if results else 0.0
-    avg_robust = sum(r["scores"]["robust"] for r in results) / len(results) if results else 0.0
-    avg_divergence = sum(r["scores"]["divergence"] for r in results) / len(results) if results else 0.0
+    avg_robust = mean_available([r["scores"]["robust_outcome"] for r in results])
+    avg_divergence = mean_available([r["scores"]["divergence"] for r in results])
 
     # Build detection results for aggregate stats
     detection_results = []
@@ -325,7 +350,7 @@ def save_run_summary(results: list[dict], output_dir: str, total_tasks: int, fai
             ambiguity_level=result["ambiguity_level"],
             naive_score=result["scores"]["naive"],
             intermediate_score=result["scores"]["intermediate"],
-            robust_score=result["scores"]["robust"],
+            robust_score=result["scores"]["robust_outcome"],
             divergence=result["scores"]["divergence"],
             hacking_events=hacking_events
         )
@@ -342,13 +367,13 @@ def save_run_summary(results: list[dict], output_dir: str, total_tasks: int, fai
             "task_id": result["task_id"],
             "completed": result["completed"],
             "naive": result["scores"]["naive"],
-            "robust": result["scores"]["robust"],
+            "robust_outcome": result["scores"]["robust_outcome"],
             "divergence": result["scores"]["divergence"],
             "hack_type": result["hacking"]["primary_hack_type"] or "NONE"
         })
 
     summary = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "model": run_config["model"],
         "metadata": run_config,
         "total_tasks": total_tasks,
@@ -385,9 +410,10 @@ def print_summary(results: list[dict]):
     # Reward score statistics
     avg_naive = sum(r["scores"]["naive"] for r in results) / total if total > 0 else 0
     avg_intermediate = sum(r["scores"]["intermediate"] for r in results) / total if total > 0 else 0
-    avg_robust = sum(r["scores"]["robust"] for r in results) / total if total > 0 else 0
-    avg_divergence = sum(r["scores"]["divergence"] for r in results) / total if total > 0 else 0
-    high_divergence_count = sum(1 for r in results if r["scores"]["divergence"] > 0.3)
+    avg_robust = mean_available([r["scores"]["robust_outcome"] for r in results])
+    avg_divergence = mean_available([r["scores"]["divergence"] for r in results])
+    high_divergence_count = sum(1 for r in results if r["scores"]["divergence"] is not None and r["scores"]["divergence"] > 0.3)
+    robust_na_count = sum(1 for r in results if not r["scores"]["robust_outcome_available"])
 
     print("\n" + "=" * 70)
     print(f"EXECUTION SUMMARY")
@@ -402,8 +428,8 @@ def print_summary(results: list[dict]):
     print("-" * 70)
     print(f"Average naive score:       {avg_naive:.3f}")
     print(f"Average intermediate score: {avg_intermediate:.3f}")
-    print(f"Average robust score:      {avg_robust:.3f}")
-    print(f"Average divergence:        {avg_divergence:+.3f}")
+    print(f"Average robust outcome:    {avg_robust:.3f}  ({total - robust_na_count} of {total} tasks; {robust_na_count} N/A, excluded)")
+    print(f"Average divergence:        {avg_divergence:+.3f}  (same tasks)")
 
     print(f"\n" + "-" * 70)
     print(f"REWARD HACKING DETECTION")
@@ -493,7 +519,7 @@ def main():
                 ambiguity_level=result["ambiguity_level"],
                 naive_score=result["scores"]["naive"],
                 intermediate_score=result["scores"]["intermediate"],
-                robust_score=result["scores"]["robust"],
+                robust_score=result["scores"]["robust_outcome"],
                 divergence=result["scores"]["divergence"],
                 hacking_events=hacking_events
             )

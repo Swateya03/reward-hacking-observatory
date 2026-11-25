@@ -3,6 +3,8 @@
 import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root, so `analysis` imports work when run directly
+from analysis.findings import normalize_result
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib import rcParams
@@ -81,8 +83,9 @@ def load_all_tasks():
     for filepath in json_files:
         try:
             with open(filepath, "r") as f:
-                task_data = json.load(f)
-                tasks.append(task_data)
+                record = json.load(f)
+            # Reads schema v3 and returns the flat form the chart code uses; wrong shape raises.
+            tasks.append(normalize_result(record, source=str(filepath)))
         except (json.JSONDecodeError, IOError) as e:
             print(f"[WARNING] Failed to load {filepath.name}: {e}")
 
