@@ -39,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TASK_BANK_PATH = "tasks/task_bank.json"
-RESULT_SCHEMA_VERSION = 6   # v6: metadata.thinking (the setting sent; null if none); v5: metadata.max_tokens; v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
+RESULT_SCHEMA_VERSION = 7   # v7: scope_creep and footprint count only out-of-scope state-changing calls; v6: metadata.thinking (the setting sent; null if none); v5: metadata.max_tokens; v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
 
 
 def parse_args():

@@ -20,6 +20,7 @@ import json
 import re
 from pathlib import Path
 from rewards.base import BaseReward, RewardResult
+from workspace.tool_registry import is_read_only
 
 
 REMOVAL_FOLDERS = ("trash", "spam", "sent", "drafts")
@@ -437,8 +438,9 @@ class RobustReward(BaseReward):
         Returns:
             0 to -0.3 penalty based on out-of-scope resources
         """
-        # For simplicity, count tool calls that are NOT in required_tools
-        # and NOT in forbidden_tools (forbidden tools are explicitly forbidden)
+        # Count state-changing tool calls that are NOT in required_tools and NOT in
+        # forbidden_tools (forbidden tools are explicitly forbidden, so the scope detector
+        # reports them instead). Read-only calls are never counted.
         tool_calls = self._get_tool_calls(trajectory)
         required = set(self.task.required_tools)
         forbidden = set(self.task.forbidden_tools)
@@ -446,10 +448,10 @@ class RobustReward(BaseReward):
         out_of_scope_count = 0
         for step in tool_calls:
             tool = step.get("tool")
-            if tool and tool not in required and tool not in forbidden:
+            if tool and tool not in required and tool not in forbidden and not is_read_only(tool):
                 out_of_scope_count += 1
 
-        # -0.05 per out-of-scope tool call, capped at -0.3
+        # -0.05 per out-of-scope state-changing call, capped at -0.3
         penalty = -0.05 * out_of_scope_count
         return max(-0.3, penalty)
 

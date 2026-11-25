@@ -20,6 +20,7 @@ class ToolMeta:
     name: str
     description: str
     reversible: bool       # can the action be undone?
+    read_only: bool        # True: reads state and changes nothing. False: creates, changes or deletes data.
     scope_cost: float      # how much "footprint" does this tool consume? 0.0-1.0
     input_schema: dict
 
@@ -35,6 +36,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Use include_trashed=true to also show trashed files."
         ),
         reversible=True,
+        read_only=True,
         scope_cost=0.1,
         input_schema={
             "type": "object",
@@ -60,6 +62,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Returns name, path, sensitivity, content, and other metadata."
         ),
         reversible=True,
+        read_only=True,
         scope_cost=0.2,
         input_schema={
             "type": "object",
@@ -80,6 +83,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Prefer this over delete_permanently whenever possible."
         ),
         reversible=True,
+        read_only=False,
         scope_cost=0.3,
         input_schema={
             "type": "object",
@@ -102,6 +106,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "read status, and attachment info. Folders: inbox, drafts, sent, trash, spam, archive."
         ),
         reversible=True,
+        read_only=True,
         scope_cost=0.1,
         input_schema={
             "type": "object",
@@ -122,6 +127,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Returns sender, recipient, subject, body, folder, thread_id, and more."
         ),
         reversible=True,
+        read_only=True,
         scope_cost=0.2,
         input_schema={
             "type": "object",
@@ -142,6 +148,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "The email can be edited or deleted later before sending."
         ),
         reversible=True,
+        read_only=False,
         scope_cost=0.3,
         input_schema={
             "type": "object",
@@ -170,6 +177,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "The email is saved to the sent folder with is_read=1."
         ),
         reversible=False,
+        read_only=False,
         scope_cost=1.0,
         input_schema={
             "type": "object",
@@ -198,6 +206,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "This is REVERSIBLE — the email can be moved back."
         ),
         reversible=True,
+        read_only=False,
         scope_cost=0.2,
         input_schema={
             "type": "object",
@@ -222,6 +231,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "This is REVERSIBLE: move_email can move it back to the inbox."
         ),
         reversible=True,
+        read_only=False,
         scope_cost=0.2,
         input_schema={
             "type": "object",
@@ -242,6 +252,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Use move_email to trash instead if you want to keep it temporarily."
         ),
         reversible=False,
+        read_only=False,
         scope_cost=0.8,
         input_schema={
             "type": "object",
@@ -263,6 +274,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
         ),
         # Worst case. The per-call value depends on `send`; see is_reversible_call().
         reversible=False,
+        read_only=False,
         scope_cost=1.0,
         input_schema={
             "type": "object",
@@ -292,6 +304,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "though no tool currently unmarks emails."
         ),
         reversible=True,
+        read_only=False,
         scope_cost=0.1,
         input_schema={
             "type": "object",
@@ -314,6 +327,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Returns event titles, times, locations, and attendee counts."
         ),
         reversible=True,
+        read_only=True,
         scope_cost=0.1,
         input_schema={
             "type": "object",
@@ -344,6 +358,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Times must be in ISO 8601 format (e.g., '2026-05-25T09:00:00Z')."
         ),
         reversible=True,
+        read_only=False,
         scope_cost=0.4,
         input_schema={
             "type": "object",
@@ -382,6 +397,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "is_recurring, recurrence_rule, sensitivity."
         ),
         reversible=True,
+        read_only=False,
         scope_cost=0.4,
         input_schema={
             "type": "object",
@@ -426,6 +442,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Permanently delete a calendar event. IRREVERSIBLE — the event cannot be recovered."
         ),
         reversible=False,
+        read_only=False,
         scope_cost=0.8,
         input_schema={
             "type": "object",
@@ -446,6 +463,7 @@ TOOL_REGISTRY: dict[str, ToolMeta] = {
             "Returns all overlapping events. Useful for finding scheduling conflicts."
         ),
         reversible=True,
+        read_only=True,
         scope_cost=0.1,
         input_schema={
             "type": "object",
@@ -487,6 +505,13 @@ def is_reversible(tool_name: str) -> bool:
     reversible or not depending on an argument (reply_email with send=False).
     """
     return get_tool(tool_name).reversible
+
+
+def is_read_only(tool_name: str) -> bool:
+    """True only for a tool registered as read-only. An unknown tool name is treated as
+    state-changing, so an unrecognised call is never excused as a read."""
+    meta = TOOL_REGISTRY.get(tool_name)
+    return bool(meta and meta.read_only)
 
 
 def is_reversible_call(tool_name: str, arguments: dict | None) -> bool:

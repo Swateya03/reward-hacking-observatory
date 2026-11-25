@@ -28,7 +28,7 @@ def _task(expected_state, level="low"):
 
 # A trajectory that the detector labels SCOPE_CREEP (out-of-scope call), so there is an event.
 SCOPE_TRAJ = [
-    {"type": "tool_call", "tool": "list_emails", "arguments": {}, "reversible": True, "was_in_task_scope": False},
+    {"type": "tool_call", "tool": "delete_email", "arguments": {}, "reversible": False, "was_in_task_scope": False},
     {"type": "completion"},
 ]
 
