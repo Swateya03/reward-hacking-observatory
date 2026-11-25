@@ -26,7 +26,8 @@ from tasks.task import TaskBank
 from rewards.scorer import Scorer
 from hacking.detector import HackingDetector
 from hacking.report import DetectionResult, print_report, aggregate
-from config import MAX_STEPS, MODEL, TEMPERATURE
+from config import MAX_STEPS, MAX_TOKENS, MODEL, TEMPERATURE
+from agent.cost import BudgetExceeded
 from hacking.unsafe_action import unsafe_action_under_ambiguity
 from hacking.detector import check_availability, CHECKS
 from rewards.outcome import robust_outcome_available
@@ -38,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TASK_BANK_PATH = "tasks/task_bank.json"
-RESULT_SCHEMA_VERSION = 4   # v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
+RESULT_SCHEMA_VERSION = 5   # v5: metadata.max_tokens; v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
 
 
 def parse_args():
@@ -73,6 +74,11 @@ def parse_args():
         "--resume",
         action="store_true",
         help="Skip tasks that already have results files (resume after interruption)"
+    )
+    parser.add_argument(
+        "--task-ids",
+        default=None,
+        help="Comma-separated task ids to run, e.g. task_001,task_021 (applied after --ambiguity)"
     )
     parser.add_argument(
         "--dry-run",
@@ -192,6 +198,7 @@ def build_result(
     model: str,
     temperature: float,
     max_steps: int,
+    max_tokens: int = MAX_TOKENS,
 ) -> dict:
     """Build the JSON record written to results/<task_id>.json.
 
@@ -221,6 +228,7 @@ def build_result(
             "model": model,
             "temperature": temperature,
             "max_steps": max_steps,
+            "max_tokens": max_tokens,
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -255,6 +263,9 @@ def run_task(
         try:
             logger.info("Starting task: %s (attempt %d/%d)", task.id, attempt + 1, max_retries + 1)
 
+            # Label this episode's cost-log entries with the task id
+            model_client.set_task(task.id)
+
             # Create and run episode
             loop = AgentLoop(model_client, workspace_client, task)
             trajectory = loop.run(max_steps=max_steps)
@@ -282,6 +293,7 @@ def run_task(
                 model=model_client.model,
                 temperature=model_client.temperature,
                 max_steps=max_steps,
+                max_tokens=model_client.max_tokens,
             )
 
             # Store hacking events for reporting
@@ -304,6 +316,10 @@ def run_task(
                 time.sleep(retry_delay)
             else:
                 logger.error("Task failed after %d retries: %s — %s", max_retries + 1, task.id, last_error)
+
+        except BudgetExceeded:
+            # Not a task failure: the run must stop. main() handles it.
+            raise
 
         except Exception as e:
             logger.error("Task failed (non-retryable): %s — %s", task.id, str(e), exc_info=True)
@@ -471,6 +487,15 @@ def main():
         logger.error("No tasks loaded")
         sys.exit(1)
 
+    if args.task_ids:
+        wanted = [t.strip() for t in args.task_ids.split(",") if t.strip()]
+        known = {t.id for t in tasks}
+        missing = [t for t in wanted if t not in known]
+        if missing:
+            logger.error("Unknown or filtered-out task ids: %s", ", ".join(missing))
+            sys.exit(1)
+        tasks = [t for t in tasks if t.id in set(wanted)]
+
     total_tasks = len(tasks)
 
     # Dry run: just print task list
@@ -519,8 +544,16 @@ def main():
     detection_results = []
     failed_count = 0
 
+    budget_stop = None
     for idx, task in enumerate(tasks, 1):
-        result = run_task(task, model_client, workspace_client, args.max_steps)
+        try:
+            result = run_task(task, model_client, workspace_client, args.max_steps)
+        except BudgetExceeded as e:
+            budget_stop = e
+            print(f"\nBUDGET GUARD: stopped before {e.task_id or task.id}, step {e.step}. "
+                  f"Running total ${e.running_total:.4f}; next call could cost up to ${e.worst_case:.4f}; "
+                  f"budget ${e.budget:.2f}. Completed episodes are saved in {args.output_dir}.")
+            break
 
         if result:
             results.append(result)
@@ -573,6 +606,26 @@ def main():
         "Experiment complete: %d completed, %d failed, %d skipped (of %d total)",
         len(results), failed_count, skipped_count, total_tasks
     )
+
+    run_state_path = Path(args.output_dir) / "run_state.json"
+    if budget_stop is not None:
+        state = {
+            "status": "stopped_by_budget",
+            "task_id": budget_stop.task_id,
+            "step": budget_stop.step,
+            "running_total_usd": round(budget_stop.running_total, 6),
+            "worst_case_next_call_usd": round(budget_stop.worst_case, 6),
+            "budget_usd": budget_stop.budget,
+            "completed_this_invocation": len(results),
+            "failed_this_invocation": failed_count,
+            "resume": "re-run the same command with --resume and the same --output-dir",
+        }
+        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+        run_state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        print(f"Run state saved to {run_state_path}. Re-run with --resume to continue.")
+        sys.exit(3)
+    if run_state_path.exists():
+        run_state_path.unlink()  # a finished run leaves no stale stop record
 
 
 if __name__ == "__main__":

@@ -38,10 +38,11 @@ def test_metadata_block_records_the_settings_passed_in():
     rec = build_result(_task({"x": {"count": 0}}), CLEAN, _scores(1.0, 1.0), [],
                        model="model-a", temperature=0.25, max_steps=7)
     assert rec["metadata"] == {
-        "schema_version": 4,
+        "schema_version": 5,
         "model": "model-a",
         "temperature": 0.25,
         "max_steps": 7,
+        "max_tokens": 2048,
     }
     # The top-level model field is the same value as metadata.model.
     assert rec["model"] == rec["metadata"]["model"]
@@ -50,7 +51,7 @@ def test_metadata_block_records_the_settings_passed_in():
 def test_metadata_schema_version_is_the_module_constant():
     rec = build_result(_task({}), CLEAN, _scores(1.0, 0.5), [],
                        model="m", temperature=0.1, max_steps=20)
-    assert rec["metadata"]["schema_version"] == RESULT_SCHEMA_VERSION == 4
+    assert rec["metadata"]["schema_version"] == RESULT_SCHEMA_VERSION == 5
 
 
 def test_metadata_reflects_config_when_callers_pass_config_values():

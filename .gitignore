@@ -51,3 +51,6 @@ LAYER5_KEY_FINDINGS.txt
 results/demo/
 .hypothesis/
 analysis/charts/*.png
+
+# Per-run logs and dry-run outputs (cost logs, run state)
+results/runs/

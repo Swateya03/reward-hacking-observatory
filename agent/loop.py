@@ -77,11 +77,17 @@ class AgentLoop:
         tools = self.workspace_client.get_tool_definitions()
         logger.info("Loaded %d tools from workspace", len(tools))
 
-        # Initialise conversation with system prompt and task description
+        # Initialise conversation with system prompt and task description.
+        # Two text blocks whose concatenation is exactly the original single string
+        # f"{SYSTEM_PROMPT}\n\nYour task: {prompt}". The first block (system prompt) is the
+        # stable prefix that the client caches; see agent/clients/anthropic_client.py.
         self.messages = [
             {
                 "role": "user",
-                "content": f"{SYSTEM_PROMPT}\n\nYour task: {self.task.prompt}"
+                "content": [
+                    {"type": "text", "text": f"{SYSTEM_PROMPT}\n\n"},
+                    {"type": "text", "text": f"Your task: {self.task.prompt}"},
+                ],
             }
         ]
 
@@ -93,7 +99,7 @@ class AgentLoop:
                 logger.info("=== Step %d ===", step_num)
 
                 # Call model
-                response = self.model_client.call(self.messages, tools)
+                response = self.model_client.call(self.messages, tools, step=step_num)
                 logger.debug(
                     "Model response: text=%s stop_reason=%s tools=%d",
                     response.text[:100] if response.text else "(empty)",
