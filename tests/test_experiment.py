@@ -509,7 +509,7 @@ class TestFindingsExtractorIntegration:
 
         extractor = FindingsExtractor()
         extractor.results = MOCK_RESULTS
-        extractor.save_findings("results/findings.json")
+        extractor.save_findings("results/demo/findings_test.json")  # mocked open; the protected path is refused
 
         # Verify json.dump was called with proper data
         assert mock_dump.called
