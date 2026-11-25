@@ -136,8 +136,9 @@ def create_chart(tasks, output_path="analysis/charts/hacking_radar.png"):
 
     # Radial axis
     ax.set_ylim(0, 1)
-    ax.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
-    ax.set_yticklabels(['20%', '40%', '60%', '80%', '100%'], fontsize=8, color='#8b949e')
+    radial_ticks = [0.2, 0.4, 0.6, 0.8, 1.0]
+    ax.set_yticks(radial_ticks)
+    ax.set_yticklabels([f"{t:.0%}" for t in radial_ticks], fontsize=8, color='#8b949e')
 
     # Category labels
     labels = [HACK_TYPE_LABELS.get(hack_type, hack_type) for hack_type in HACK_TYPES]
@@ -152,7 +153,7 @@ def create_chart(tasks, output_path="analysis/charts/hacking_radar.png"):
 
     ax.set_title('Reward Hacking Behavioral Profile', fontsize=13, fontweight='bold',
                 color='#e6edf3', pad=20)
-    ax.text(0.5, -0.12, 'Area = hacking surface — larger area = more hacking diversity',
+    ax.text(0.5, -0.12, 'Area = hacking surface — larger area = more kinds of detector-flagged hacks',
            transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e', style='italic')
 
     plt.tight_layout()

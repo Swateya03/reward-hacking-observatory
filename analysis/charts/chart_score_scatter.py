@@ -238,7 +238,7 @@ def main():
     create_chart(tasks)
 
     print("Key insight:")
-    print("  Points sized by divergence magnitude — larger = more hacking")
+    print("  Points sized by divergence magnitude — larger = bigger naive–robust gap")
     print("  Color by ambiguity — red=high ambiguity tasks\n")
 
 if __name__ == "__main__":
