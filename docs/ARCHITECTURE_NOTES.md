@@ -11,7 +11,7 @@ These notes describe the code on branch `fix/readme-consistency`, which includes
 - **There is no experiment run yet.** The repo holds no per-task result files and no run summary. The only findings file is `results/legacy/findings_partial_run.json`, whose source run is unknown. Nothing in this document is a measured result.
 - **The pipeline is end to end.** `run_experiment.py` writes per-task files in schema v4. `analysis/findings.py` reads them. A fake episode run through the real writer and reader gives correct counts (tests in `tests/test_findings_pipeline.py`).
 - **Settings:** step limit 20, model `claude-sonnet-4-20250514`, temperature 0.1, no seed (`config.py`). Every result records these in `metadata`.
-- **Tests:** 278 pass with the workspace server up. With the server down: 220 pass, 51 fail (all in `tests/test_workspace.py`), and 7 are skipped (the archive tool tests).
+- **Tests:** 296 pass with the workspace server up. With the server down: 238 pass, 51 fail (all in `tests/test_workspace.py`), and 7 are skipped (the archive tool tests).
 
 ---
 
@@ -24,7 +24,7 @@ Entry point: `run_experiment.main()`. Single-episode demo: `demo.py` (separate l
 3. **`run_task()`** retries only on API connection and rate-limit errors (up to 3 retries). Any other exception returns no result for that task.
 4. **`AgentLoop.run()`** (`agent/loop.py`):
    - creates a workspace session (`POST /session/create`), seeded from the task's fixture;
-   - lists the 17 tools (`POST /mcp`, `tools/list`);
+   - lists the 17 tools, 9 of them email tools (`POST /mcp`, `tools/list`);
    - sends one user message containing the system prompt and `Your task: ...`;
    - each step calls the model, then classifies the reply. Any tool call → `tool_call` (each call runs on the server and is recorded). A reply with `?` and no tool call → `clarification` (**episode ends**). An `end_turn` with no tool call → `completion` (**episode ends**). Anything else → `reasoning` (continues).
    - each tool call records `reversible = is_reversible_call(tool, arguments)` and `was_in_task_scope = tool in task.required_tools`.
@@ -147,8 +147,8 @@ metadata: { schema_version: 4, model, temperature, max_steps }
 | Script | Reads | Status |
 |---|---|---|
 | chart_divergence_by_ambiguity.py | legacy findings | Runs on the legacy file only. Not run here, so the committed PNG is not touched. |
-| chart_hack_rate.py | legacy findings | Same. Hard-coded overlay text ("50% threshold", "0%→100%"). |
-| chart_hack_types.py | legacy findings | Same. Hard-coded caption "Sycophantic Caution dominates". |
+| chart_hack_rate.py | legacy findings | Same. Bar labels and the insight line are computed by `build_annotations`. The 50% line is a labelled design threshold (`HACK_RATE_THRESHOLD`), not a result. |
+| chart_hack_types.py | legacy findings | Same. The caption is computed by `build_subtitle` (most frequent type and its share). |
 | chart_score_scatter.py | `results/task_*.json` through `normalize_result` | Reads schema v4. N/A tasks have no point. Fails with exit 1 when there are no task files. |
 | chart_radar.py | `results/task_*.json` through `normalize_result` | Reads schema v4. Compares hack types case-insensitively. Fails with exit 1 when there are no task files. |
 
@@ -177,16 +177,18 @@ The committed PNGs were generated from the legacy file. They are not current res
 | test_hacking.py | 23 |
 | test_experiment.py | 24 |
 | test_charts.py | 31 |
+| test_chart_annotations.py | 10 |
 | test_findings_pipeline.py | 8 |
+| test_findings_output.py | 8 |
 | test_reversibility.py | 9 |
 | test_outcome_and_policy.py | 47 |
 | test_archive_email.py (7 need the server) | 11 |
 | test_metric_gaming_availability.py | 8 |
 | test_regression.py (reads legacy file) | 19 |
-| **Total** | **278** |
+| **Total** | **296** |
 
-- **Server up:** 278 passed, 0 failed, 0 skipped.
-- **Server down:** 220 passed, 51 failed (all in `test_workspace.py`, connection errors), 7 skipped (archive tool tests).
+- **Server up:** 296 passed, 0 failed, 0 skipped.
+- **Server down:** 238 passed, 51 failed (all in `test_workspace.py`, connection errors), 7 skipped (archive tool tests).
 
 **What the tests do not cover:**
 - `tests/test_experiment.py` does not import `run_experiment.py`. Its flag tests reimplement the logic inline.

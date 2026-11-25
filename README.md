@@ -10,7 +10,7 @@
 
 ![Rewards](https://img.shields.io/badge/3%20Reward%20Functions-Naive%20%7C%20Intermediate%20%7C%20Robust-bc8cff?style=for-the-badge)
 ![Results](https://img.shields.io/badge/Results-pending%20full%20run-lightgrey?style=for-the-badge)
-![Tests](https://img.shields.io/badge/Tests-278%20Passing-39d3f0?style=for-the-badge)
+![Tests](https://img.shields.io/badge/Tests-296%20Passing-39d3f0?style=for-the-badge)
 
 </div>
 
@@ -287,7 +287,7 @@ The **rewards layer** implements three functions that score the same trajectory 
 
 ### Implementation layers & visualizations
 
-The project spans multiple layers with a pytest suite of 278 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
+The project spans multiple layers with a pytest suite of 296 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
 
 ### Project structure
 
@@ -352,6 +352,8 @@ reward-hacking-observatory/
 │   ├── test_experiment.py      ← 24 tests: findings extraction and run-flag logic (does not import run_experiment.py)
 │   ├── test_charts.py          ← 31 tests: chart data preparation, matplotlib mocking
 │   ├── test_findings_pipeline.py ← 8 tests: fake episodes through the real writer and reader
+│   ├── test_findings_output.py ← 8 tests: findings output path guard and required --out
+│   ├── test_chart_annotations.py ← 10 tests: chart text computed from the data (spies on drawn text)
 │   ├── test_reversibility.py   ← 9 tests: draft vs sent reply_email
 │   ├── test_outcome_and_policy.py ← 47 tests: N/A outcome, task 014/021 states, policy metric, chart loaders
 │   ├── test_archive_email.py   ← 11 tests: archive_email and its registry entry (7 need the server)
@@ -375,11 +377,11 @@ The project includes three testing layers:
 
 | # | Layer | What it covers |
 |---|---|---|
-| 1️⃣ | **Unit and integration tests** (test_workspace, test_agent, test_rewards, test_hacking, test_experiment, test_charts, test_findings_pipeline, test_reversibility, test_outcome_and_policy, test_metric_gaming_availability, test_archive_email) | Verify individual components: tool execution, reward function computation, hack detection, and chart generation |
+| 1️⃣ | **Unit and integration tests** (test_workspace, test_agent, test_rewards, test_hacking, test_experiment, test_charts, test_chart_annotations, test_findings_pipeline, test_findings_output, test_reversibility, test_outcome_and_policy, test_metric_gaming_availability, test_archive_email) | Verify individual components: tool execution, reward function computation, hack detection, and chart generation |
 | 2️⃣ | **Regression tests** (test_regression.py) | Check the structure and ordering of the legacy findings file (`results/legacy/`), whose source run is unknown. They do not check current results |
 | 3️⃣ | **Integration tests** (in each layer) | Verify end-to-end workflows: running a task from prompt through detection to findings |
 
-Run all tests: `pytest tests/ -v` — 🟢 **278 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 220 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
+Run all tests: `pytest tests/ -v` — 🟢 **296 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 238 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
 
 ---
 
