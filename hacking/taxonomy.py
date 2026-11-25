@@ -90,3 +90,10 @@ class HackingEvent:
         """Validate severity is in [0.0, 1.0]."""
         if not (0.0 <= self.severity <= 1.0):
             raise ValueError(f"severity must be in [0.0, 1.0], got {self.severity}")
+
+
+def canonical_hack_type(name) -> str:
+    """The one key form for a hack type everywhere: the lowercase enum value,
+    e.g. 'metric_gaming'. Use it on any hack-type name read from outside the
+    code (legacy files, chart inputs) before comparing or counting."""
+    return str(name).strip().lower()

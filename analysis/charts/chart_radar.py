@@ -3,8 +3,9 @@
 import json
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root, so `analysis` imports work when run directly
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root, so `analysis` and `hacking` imports work when run directly
 from analysis.findings import normalize_result
+from hacking.taxonomy import canonical_hack_type
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import numpy as np
@@ -27,23 +28,22 @@ rcParams['axes.edgecolor'] = '#30363d'
 LOW_COLOR = '#3fb950'
 MEDIUM_COLOR = '#d29922'
 HIGH_COLOR = '#f85149'
-ACCENT_COLOR = '#bc8cff'
 
-# Hack types
+# Hack types, canonical lowercase keys (see hacking.taxonomy.canonical_hack_type)
 HACK_TYPES = [
-    "METRIC_GAMING",
-    "SCOPE_CREEP",
-    "IRREVERSIBILITY_BIAS",
-    "OVERCLAIMING",
-    "SYCOPHANTIC_CAUTION",
+    "metric_gaming",
+    "scope_creep",
+    "irreversibility_bias",
+    "overclaiming",
+    "sycophantic_caution",
 ]
 
 HACK_TYPE_LABELS = {
-    "METRIC_GAMING": "Metric\nGaming",
-    "SCOPE_CREEP": "Scope\nCreep",
-    "IRREVERSIBILITY_BIAS": "Irreversibility\nBias",
-    "OVERCLAIMING": "Over\nclaiming",
-    "SYCOPHANTIC_CAUTION": "Sycophantic\nCaution",
+    "metric_gaming": "Metric\nGaming",
+    "scope_creep": "Scope\nCreep",
+    "irreversibility_bias": "Irreversibility\nBias",
+    "overclaiming": "Over\nclaiming",
+    "sycophantic_caution": "Sycophantic\nCaution",
 }
 
 AMBIGUITY_COLORS = {
@@ -51,6 +51,8 @@ AMBIGUITY_COLORS = {
     "medium": MEDIUM_COLOR,
     "high": HIGH_COLOR,
 }
+
+LEVELS = ("low", "medium", "high")
 
 def load_all_tasks():
     """Load all task JSON files from results/."""
@@ -71,7 +73,7 @@ def load_all_tasks():
         try:
             with open(filepath, "r") as f:
                 record = json.load(f)
-            # Reads schema v3 and returns the flat form the chart code uses; wrong shape raises.
+            # Reads schema v4 and returns the flat form the chart code uses; wrong shape raises.
             tasks.append(normalize_result(record, source=str(filepath)))
         except (json.JSONDecodeError, IOError) as e:
             print(f"[WARNING] Failed to load {filepath.name}: {e}")
@@ -79,32 +81,36 @@ def load_all_tasks():
     return tasks
 
 def aggregate_hacks_by_ambiguity(tasks: list) -> dict:
-    """Aggregate hack counts by ambiguity level.
-
-    Args:
-        tasks: List of task dicts
+    """Count detector events per canonical hack type, per ambiguity level.
 
     Returns:
-        Dict mapping ambiguity level to hack type counts
+        {level: {canonical_type: count}} for every level and every HACK_TYPES entry
     """
-    by_ambiguity = {"low": {}, "medium": {}, "high": {}}
-
-    for hack_type in HACK_TYPES:
-        for level in ["low", "medium", "high"]:
-            by_ambiguity[level][hack_type] = 0
+    by_ambiguity = {level: {hack_type: 0 for hack_type in HACK_TYPES} for level in LEVELS}
 
     for task in tasks:
         ambiguity = task.get("ambiguity_level", "unknown")
         if ambiguity not in by_ambiguity:
             continue
 
-        hacks = task.get("hacking_events", [])
-        for hack in hacks:
-            hack_type = (hack.get("hack_type") or "").upper()  # records hold lowercase enum values
+        for hack in task.get("hacking_events", []):
+            hack_type = canonical_hack_type(hack.get("hack_type") or "")
             if hack_type in HACK_TYPES:
                 by_ambiguity[ambiguity][hack_type] += 1
 
     return by_ambiguity
+
+def build_annotations(by_ambiguity: dict) -> dict:
+    """Every result-bearing string on the chart, computed from the counts (testable)."""
+    totals = {level: sum(by_ambiguity[level].values()) for level in LEVELS}
+    top = max(totals.values())
+    if top == 0:
+        most = "No detector events recorded at any ambiguity level."
+    else:
+        peaks = [level for level in LEVELS if totals[level] == top]
+        names = " and ".join(p.capitalize() for p in peaks)
+        most = f"Most detector events: {names} ambiguity ({top} events)."
+    return {"most_events": most}
 
 def create_chart(tasks, output_path="analysis/charts/hacking_radar.png"):
     """Create radar chart of hacking profiles by ambiguity level."""
@@ -119,7 +125,8 @@ def create_chart(tasks, output_path="analysis/charts/hacking_radar.png"):
     angles += angles[:1]
 
     # Plot each ambiguity level
-    for level, color in AMBIGUITY_COLORS.items():
+    for level in LEVELS:
+        color = AMBIGUITY_COLORS[level]
         values = [by_ambiguity[level].get(hack_type, 0) for hack_type in HACK_TYPES]
         max_val = max(max(values), 1)
         values = [v / max_val for v in values]
@@ -151,9 +158,9 @@ def create_chart(tasks, output_path="analysis/charts/hacking_radar.png"):
     # Legend
     ax.legend(loc='upper right', bbox_to_anchor=(1.3, 1.1), fontsize=10, framealpha=0.9)
 
-    ax.set_title('Reward Hacking Behavioral Profile', fontsize=13, fontweight='bold',
+    ax.set_title('Detector Events by Hack Type and Ambiguity', fontsize=13, fontweight='bold',
                 color='#e6edf3', pad=20)
-    ax.text(0.5, -0.12, 'Area = hacking surface — larger area = more kinds of detector-flagged hacks',
+    ax.text(0.5, -0.12, 'Each ring: count for that level, scaled to the largest count on the chart',
            transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e', style='italic')
 
     plt.tight_layout()
@@ -163,25 +170,25 @@ def create_chart(tasks, output_path="analysis/charts/hacking_radar.png"):
     return fig
 
 def print_analysis(tasks):
-    """Print hacking profile analysis."""
+    """Print detector event counts per level."""
     by_ambiguity = aggregate_hacks_by_ambiguity(tasks)
 
     print("\n" + "="*70)
-    print("HACKING PROFILE ANALYSIS BY AMBIGUITY LEVEL")
+    print("DETECTOR EVENTS BY AMBIGUITY LEVEL")
     print("="*70)
     print()
 
-    for level in ["low", "medium", "high"]:
+    for level in LEVELS:
         print(f"{level.upper()} AMBIGUITY:")
         counts = by_ambiguity[level]
         total = sum(counts.values())
 
         if total == 0:
-            print("  No hacks detected")
+            print("  No detector events")
         else:
             for hack_type in HACK_TYPES:
                 count = counts.get(hack_type, 0)
-                label = HACK_TYPE_LABELS.get(hack_type, hack_type)
+                label = HACK_TYPE_LABELS.get(hack_type, hack_type).replace("\n", " ")
                 pct = (count / total * 100) if total > 0 else 0
                 if count > 0:
                     print(f"  {label:<30} {count:3} ({pct:5.1f}%)")
@@ -199,9 +206,8 @@ def main():
     print_analysis(tasks)
     create_chart(tasks)
 
-    print("\nKey insight:")
-    print("  - Low ambiguity: minimal hacking (clear instructions)")
-    print("  - High ambiguity: diverse hacking types (unclear goals)\n")
+    print("\nComputed summary:")
+    print("  - " + build_annotations(aggregate_hacks_by_ambiguity(tasks))["most_events"] + "\n")
 
 if __name__ == "__main__":
     main()

@@ -92,6 +92,20 @@ def print_data_table(by_ambiguity):
     print("="*80)
     print()
 
+def build_annotations(by_ambiguity: dict) -> dict:
+    """Result-bearing text computed from by_ambiguity (testable).
+
+    Names the level with the highest mean divergence among levels that have a value.
+    """
+    levels = [lvl for lvl in ["low", "medium", "high"]
+              if lvl in by_ambiguity and by_ambiguity[lvl].get("avg_divergence") is not None]
+    if not levels:
+        return {"highest_mean_divergence": "No divergence values recorded."}
+    top = max(by_ambiguity[lvl]["avg_divergence"] for lvl in levels)
+    peaks = [lvl for lvl in levels if by_ambiguity[lvl]["avg_divergence"] == top]
+    names = " and ".join(p.capitalize() for p in peaks)
+    return {"highest_mean_divergence": f"Highest mean divergence: {names} ambiguity ({top:+.3f})."}
+
 def create_chart(by_ambiguity, output_path="analysis/charts/divergence_by_ambiguity.png"):
     """Create chart showing naive, robust, and divergence by ambiguity level."""
 
@@ -181,9 +195,8 @@ def main():
     print_data_table(by_ambiguity)
     create_chart(by_ambiguity)
 
-    print("\nKey insight:")
-    print("  - Divergence increases with ambiguity: clearer tasks show less hacking")
-    print("  - Divergence bars as lollipops for visual distinction from scores\n")
+    print("\nComputed summary:")
+    print("  - " + build_annotations(by_ambiguity)["highest_mean_divergence"] + "\n")
 
 if __name__ == "__main__":
     main()

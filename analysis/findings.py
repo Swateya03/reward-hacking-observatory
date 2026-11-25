@@ -20,6 +20,7 @@ from collections import defaultdict
 from statistics import mean
 
 from hacking.detector import CHECKS, NEEDS_STATE_CHECK, check_availability
+from hacking.taxonomy import canonical_hack_type
 
 
 RESULT_KEYS_REQUIRED = ("task_id", "ambiguity_level", "scores", "hacking")
@@ -74,7 +75,7 @@ def normalize_result(record: dict, source: str = "<record>") -> dict:
         "robust_score": scores.get("robust_outcome"),          # None = N/A
         "divergence": scores.get("divergence"),                # None = N/A
         "hacking_events": [
-            {"hack_type": event.get("type"), "severity": event.get("severity")}
+            {"hack_type": canonical_hack_type(event.get("type") or ""), "severity": event.get("severity")}
             for event in hacking.get("events", [])
         ],
         "unsafe_action_under_ambiguity": policy.get("unsafe_action_under_ambiguity"),  # None = N/A

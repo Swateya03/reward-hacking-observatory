@@ -3,9 +3,11 @@
 import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root, so `hacking` imports work when run directly
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 import numpy as np
+from hacking.taxonomy import canonical_hack_type
 
 # GitHub dark theme styling
 rcParams['font.family'] = 'DejaVu Sans'
@@ -21,38 +23,46 @@ rcParams['text.color'] = '#e6edf3'
 rcParams['grid.color'] = '#30363d'
 rcParams['axes.edgecolor'] = '#30363d'
 
-# Hack type colors - GitHub palette
+# Canonical keys: lowercase enum values (see hacking.taxonomy.canonical_hack_type).
 HACK_TYPE_LABELS = {
-    "METRIC_GAMING": "Metric Gaming",
-    "SCOPE_CREEP": "Scope Creep",
-    "IRREVERSIBILITY_BIAS": "Irreversibility Bias",
-    "OVERCLAIMING": "Overclaiming",
-    "SYCOPHANTIC_CAUTION": "Sycophantic Caution",
+    "metric_gaming": "Metric Gaming",
+    "scope_creep": "Scope Creep",
+    "irreversibility_bias": "Irreversibility Bias",
+    "overclaiming": "Overclaiming",
+    "sycophantic_caution": "Sycophantic Caution",
 }
 
 HACK_TYPE_COLORS = {
-    "METRIC_GAMING": "#f85149",
-    "SCOPE_CREEP": "#d29922",
-    "IRREVERSIBILITY_BIAS": "#bc8cff",
-    "OVERCLAIMING": "#79c0ff",
-    "SYCOPHANTIC_CAUTION": "#58a6ff",
+    "metric_gaming": "#f85149",
+    "scope_creep": "#d29922",
+    "irreversibility_bias": "#bc8cff",
+    "overclaiming": "#79c0ff",
+    "sycophantic_caution": "#58a6ff",
 }
+
+
+def canonical_counts(findings: dict) -> dict:
+    """Hack-type counts keyed by the canonical lowercase name. Input keys may be
+    any casing (the legacy file uses uppercase)."""
+    raw = (findings.get("hack_types") or {}).get("counts") or {}
+    out = {}
+    for name, count in raw.items():
+        key = canonical_hack_type(name)
+        out[key] = out.get(key, 0) + count
+    return out
+
 
 def prepare_data(findings: dict) -> list:
     """Extract and prepare hack type data (testable).
 
-    Args:
-        findings: Dict with 'hack_types' key containing counts
-
     Returns:
-        List of tuples (human_readable_label, count, enum_name) sorted descending by count
+        List of tuples (human_readable_label, count, canonical_name) sorted descending by count
     """
-    hack_types_data = findings.get("hack_types", {})
-    counts = hack_types_data.get("counts", {})
+    counts = canonical_counts(findings)
 
     hack_list = [
-        (HACK_TYPE_LABELS.get(enum_name, enum_name), counts.get(enum_name, 0), enum_name)
-        for enum_name in HACK_TYPE_LABELS.keys()
+        (HACK_TYPE_LABELS[name], counts.get(name, 0), name)
+        for name in HACK_TYPE_LABELS
     ]
 
     hack_list.sort(key=lambda x: x[1], reverse=True)
@@ -86,22 +96,20 @@ def load_findings():
     with open(findings_path, "r") as f:
         return json.load(f)
 
-def print_data_table(hack_types_data):
+def print_data_table(findings):
     """Print the data table to terminal."""
     print("\n" + "="*60)
     print("HACK TYPE DISTRIBUTION - DATA TABLE")
     print("="*60)
     print()
 
-    counts = hack_types_data.get("counts", {})
-    total = sum(counts.values())
+    rows = prepare_data(findings)
+    total = sum(count for _, count, _ in rows)
 
     print(f"{'Hack Type':<25} {'Count':<8} {'Percentage':<12}")
     print("-" * 60)
 
-    for enum_name in sorted(counts.keys(), key=lambda x: counts[x], reverse=True):
-        count = counts[enum_name]
-        label = HACK_TYPE_LABELS.get(enum_name, enum_name)
+    for label, count, _ in sorted(rows, key=lambda r: r[1], reverse=True):
         pct = (count / total * 100) if total > 0 else 0
         print(f"{label:<25} {count:<8} {pct:>6.1f}%")
 
@@ -114,7 +122,6 @@ def print_data_table(hack_types_data):
 def create_chart(findings, output_path="analysis/charts/hack_type_distribution.png"):
     """Create Cleveland dot plot of hack type distribution."""
 
-    hack_types_data = findings.get("hack_types", {})
     hack_list = prepare_data(findings)
 
     if not hack_list:
@@ -160,7 +167,7 @@ def create_chart(findings, output_path="analysis/charts/hack_type_distribution.p
     ax.text(0.5, 1.10, build_subtitle(findings),
            transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e', style='italic')
 
-    ax.set_xlim(0, max(counts) * 1.3)
+    ax.set_xlim(0, max(max(counts), 1) * 1.3)
     ax.grid(axis='x', alpha=0.15, linestyle='--', color='#30363d')
     ax.invert_yaxis()
 
@@ -173,12 +180,11 @@ def create_chart(findings, output_path="analysis/charts/hack_type_distribution.p
 def main():
     """Load findings and create chart."""
     findings = load_findings()
-    hack_types_data = findings.get("hack_types", {})
 
-    print_data_table(hack_types_data)
+    print_data_table(findings)
     create_chart(findings)
 
-    print("\nKey insight:")
+    print("\nComputed summary:")
     print("  - " + build_subtitle(findings) + "\n")
 
 if __name__ == "__main__":

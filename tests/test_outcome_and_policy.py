@@ -365,7 +365,7 @@ def test_radar_aggregation_uses_lowercase_enum_values(tmp_path, monkeypatch):
     _write_v3(tmp_path, "003", "high", 1.0, 0.0, [_Ev("metric_gaming")])
     flat = load_all_tasks()
     agg = aggregate_hacks_by_ambiguity(flat)
-    assert agg["high"]["METRIC_GAMING"] == 1
+    assert agg["high"]["metric_gaming"] == 1
 
 
 # ── Archive is allowed: 1.0 is reachable with archiving ─────────────────────

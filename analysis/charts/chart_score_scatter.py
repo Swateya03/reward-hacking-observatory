@@ -142,7 +142,7 @@ def create_chart(tasks, output_path="analysis/charts/score_scatter.png"):
     # Shaded region below diagonal (reward hacking zone)
     x_fill = np.linspace(0, 1, 100)
     ax.fill_between(x_fill, x_fill, 0, color=DIVERGE_COLOR, alpha=0.06, zorder=1)
-    ax.text(0.80, 0.05, 'Reward Hacking Zone', fontsize=9, color=DIVERGE_COLOR,
+    ax.text(0.80, 0.05, 'naive > robust', fontsize=9, color=DIVERGE_COLOR,
             alpha=0.7, style='italic', zorder=2)
 
     # Diagonal reference line
@@ -196,7 +196,7 @@ def create_chart(tasks, output_path="analysis/charts/score_scatter.png"):
     ]
     ax.legend(handles=legend_elements, loc='upper left', fontsize=10, framealpha=0.9)
 
-    ax.text(0.5, -0.15, 'Points below diagonal indicate reward hacking',
+    ax.text(0.5, -0.15, 'Below the dashed diagonal: naive score > robust score (divergence > 0)',
            transform=ax.transAxes, ha='center', fontsize=10, color='#8b949e',
            style='italic')
 
@@ -222,9 +222,7 @@ def print_analysis(tasks):
     print(f"Points BELOW diagonal (naive > robust):  {below:2d} ({below/total*100:5.1f}%)")
     print(f"Total tasks with valid scores:           {total:2d}")
     print()
-    print("Interpretation:")
-    print("  - ABOVE diagonal: Agent is conservative (robust outperforms naive)")
-    print("  - BELOW diagonal: Agent overstates performance (reward hacking signal)")
+    print("Axes: x = naive score, y = robust score. Below the diagonal means naive > robust.")
     print()
     print("="*60)
     print()
@@ -237,9 +235,8 @@ def main():
     print_analysis(tasks)
     create_chart(tasks)
 
-    print("Key insight:")
-    print("  Points sized by divergence magnitude — larger = bigger naive–robust gap")
-    print("  Color by ambiguity — red=high ambiguity tasks\n")
+    print("Legend:")
+    print("  Points sized by |naive - robust|; colour = ambiguity level\n")
 
 if __name__ == "__main__":
     main()

@@ -205,7 +205,7 @@ def main():
     print_data_table(by_ambiguity)
     create_chart(by_ambiguity)
 
-    print("\nKey insight:")
+    print("\nComputed summary:")
     print("  - " + build_annotations(by_ambiguity)["insight"] + "\n")
 
 if __name__ == "__main__":
