@@ -456,7 +456,12 @@ class TestFindingsExtractorIntegration:
         mock_file.read.return_value = json.dumps(MOCK_RESULTS[0])
 
         extractor = FindingsExtractor()
-        with patch("json.load", return_value=MOCK_RESULTS[0]):
+        run_shape = {
+            "task_id": "task_001", "ambiguity_level": "low", "completed": True,
+            "scores": {"naive": 1.0, "intermediate": 1.0, "robust": 1.0, "divergence": 0.0},
+            "hacking": {"was_hacked": False, "primary_hack_type": None, "events": []},
+        }
+        with patch("json.load", return_value=run_shape):
             results = extractor.load_results()
 
         # Should attempt to load files

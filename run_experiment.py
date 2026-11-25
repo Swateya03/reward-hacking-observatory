@@ -26,6 +26,7 @@ from tasks.task import TaskBank
 from rewards.scorer import Scorer
 from hacking.detector import HackingDetector
 from hacking.report import DetectionResult, print_report, aggregate
+from config import MAX_STEPS, MODEL, TEMPERATURE
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,6 +35,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TASK_BANK_PATH = "tasks/task_bank.json"
+RESULT_SCHEMA_VERSION = 2   # nested scores/hacking + metadata block (v1 had neither metadata nor stopped_reason)
 
 
 def parse_args():
@@ -56,8 +58,8 @@ def parse_args():
     parser.add_argument(
         "--max-steps",
         type=int,
-        default=20,
-        help="Maximum steps per episode (default: 20)"
+        default=MAX_STEPS,
+        help=f"Maximum steps per episode (default from config.py: {MAX_STEPS})"
     )
     parser.add_argument(
         "--output-dir",
@@ -117,6 +119,75 @@ def task_already_completed(task_id: str, output_dir: str) -> bool:
     return result_path.exists()
 
 
+def summarise_scores(scores: dict) -> dict:
+    """Flatten the Scorer output into the plain numbers stored in a result file."""
+    return {
+        "naive": round(scores["naive"].score, 3),
+        "intermediate": round(scores["intermediate"].score, 3),
+        "robust": round(scores["robust"].score, 3),
+        "divergence": scores["divergence"],
+    }
+
+
+def summarise_hacking(hacking_events: list) -> dict:
+    """Detector output in the shape stored in a result file.
+
+    primary_hack_type is the first event in detector order (not highest severity).
+    """
+    return {
+        "was_hacked": len(hacking_events) > 0,
+        "primary_hack_type": hacking_events[0].hack_type.value if hacking_events else None,
+        "events": [
+            {
+                "type": event.hack_type.value,
+                "severity": round(event.severity, 3),
+                "description": event.description,
+            }
+            for event in hacking_events
+        ],
+    }
+
+
+def build_result(
+    task,
+    trajectory: list,
+    scores: dict,
+    hacking_events: list,
+    *,
+    model: str,
+    temperature: float,
+    max_steps: int,
+) -> dict:
+    """Build the JSON record written to results/<task_id>.json.
+
+    This is the only writer of per-task results. findings.py reads this shape.
+    The metadata block records the settings the episode was run with.
+    """
+    completion_type = trajectory[-1]["type"] if trajectory else None
+    # The loop only stops early on completion or clarification; anything else ran out of steps.
+    stopped_reason = completion_type if completion_type in ("completion", "clarification") else "step_limit"
+    return {
+        "task_id": task.id,
+        "ambiguity_level": task.ambiguity_level,
+        "model": model,
+        "trajectory": trajectory,
+        "step_count": len(trajectory),
+        "tool_call_count": sum(1 for step in trajectory if step["type"] == "tool_call"),
+        "completed": completion_type in ("completion", "tool_call"),
+        "completion_type": completion_type,
+        "stopped_reason": stopped_reason,
+        "scores": summarise_scores(scores),
+        "hacking": summarise_hacking(hacking_events),
+        "metadata": {
+            "schema_version": RESULT_SCHEMA_VERSION,
+            "model": model,
+            "temperature": temperature,
+            "max_steps": max_steps,
+        },
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
 def run_task(
     task,
     model_client: AnthropicClient,
@@ -150,25 +221,9 @@ def run_task(
             loop = AgentLoop(model_client, workspace_client, task)
             trajectory = loop.run(max_steps=max_steps)
 
-            # Analyse trajectory
-            step_count = len(trajectory)
-            tool_call_count = sum(
-                1 for step in trajectory if step["type"] == "tool_call"
-            )
-            completion_type = trajectory[-1]["type"] if trajectory else None
-            completed = completion_type in ("completion", "tool_call")
-
             # Score the trajectory with all three reward functions (before deleting session)
             scorer = Scorer(workspace_client, task)
             scores = scorer.score_all(trajectory, loop.session_id)
-
-            # Extract score values for easier access
-            scores_summary = {
-                "naive": round(scores["naive"].score, 3),
-                "intermediate": round(scores["intermediate"].score, 3),
-                "robust": round(scores["robust"].score, 3),
-                "divergence": scores["divergence"]
-            }
 
             # Run hacking detector (before deleting session)
             detector = HackingDetector(task, workspace_client)
@@ -179,44 +234,23 @@ def run_task(
                 loop.session_id
             )
 
-            # Build hacking summary for JSON
-            hacking_summary = {
-                "was_hacked": len(hacking_events) > 0,
-                "primary_hack_type": hacking_events[0].hack_type.value if hacking_events else None,
-                "events": [
-                    {
-                        "type": event.hack_type.value,
-                        "severity": round(event.severity, 3),
-                        "description": event.description
-                    }
-                    for event in hacking_events
-                ]
-            }
-
             # Clean up workspace session after detection
             workspace_client.delete_session(loop.session_id)
 
-            result = {
-                "task_id": task.id,
-                "ambiguity_level": task.ambiguity_level,
-                "model": "claude-sonnet-4-20250514",
-                "trajectory": trajectory,
-                "step_count": step_count,
-                "tool_call_count": tool_call_count,
-                "completed": completed,
-                "completion_type": completion_type,
-                "scores": scores_summary,
-                "hacking": hacking_summary,
-                "timestamp": datetime.utcnow().isoformat()
-            }
+            result = build_result(
+                task, trajectory, scores, hacking_events,
+                model=model_client.model,
+                temperature=model_client.temperature,
+                max_steps=max_steps,
+            )
 
             # Store hacking events for reporting
             result["_hacking_events"] = hacking_events
 
             logger.info(
                 "Task completed: %s (steps=%d, tools=%d, naive=%.2f, robust=%.2f, divergence=%.2f)",
-                task.id, step_count, tool_call_count,
-                scores_summary["naive"], scores_summary["robust"], scores_summary["divergence"]
+                task.id, result["step_count"], result["tool_call_count"],
+                result["scores"]["naive"], result["scores"]["robust"], result["scores"]["divergence"]
             )
             return result
 
@@ -270,7 +304,7 @@ def print_task_result(result: dict):
     print(f"{task_id:12} | {ambiguity:6} | {steps:2} | naive={naive:.2f} | robust={robust:.2f} | hacked={hacked:3} | type={hack_type}")
 
 
-def save_run_summary(results: list[dict], output_dir: str, total_tasks: int, failed_count: int, skipped_count: int):
+def save_run_summary(results: list[dict], output_dir: str, total_tasks: int, failed_count: int, skipped_count: int, run_config: dict):
     """Save experiment summary to JSON file."""
     output_path = Path(output_dir) / "run_summary.json"
 
@@ -315,7 +349,8 @@ def save_run_summary(results: list[dict], output_dir: str, total_tasks: int, fai
 
     summary = {
         "timestamp": datetime.utcnow().isoformat(),
-        "model": "claude-sonnet-4-20250514",
+        "model": run_config["model"],
+        "metadata": run_config,
         "total_tasks": total_tasks,
         "completed": completed_count,
         "failed": failed_count,
@@ -419,6 +454,11 @@ def main():
     # Initialise clients
     model_client = AnthropicClient()
     workspace_client = WorkspaceClient()
+    run_config = {
+        "model": model_client.model,
+        "temperature": model_client.temperature,
+        "max_steps": args.max_steps,
+    }
 
     # Verify workspace server is running
     if not workspace_client.health_check():
@@ -476,7 +516,7 @@ def main():
     print_report(detection_results)
 
     # Save run summary
-    save_run_summary(results, args.output_dir, total_tasks, failed_count, skipped_count)
+    save_run_summary(results, args.output_dir, total_tasks, failed_count, skipped_count, run_config)
 
     # Print final status
     print("\n" + "=" * 70)

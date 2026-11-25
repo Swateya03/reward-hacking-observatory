@@ -1,10 +1,51 @@
-"""Findings extractor for reward hacking observatory experiment results."""
+"""Findings extractor for reward hacking observatory experiment results.
+
+Reads the per-task files written by run_experiment.build_result (schema v2:
+nested `scores` and `hacking.events[].type`, plus a `metadata` block).
+
+Internally, every record is converted by normalize_result() into a flat dict
+with keys naive_score, robust_score, divergence, hacking_events[].hack_type,
+ambiguity_level, completed, metadata. The aggregation methods work on that
+flat form. Code that sets `extractor.results` directly must pass flat records.
+"""
 
 import json
-import os
 from pathlib import Path
 from collections import defaultdict
-from statistics import mean, stdev
+from statistics import mean
+
+
+RESULT_KEYS_REQUIRED = ("task_id", "ambiguity_level", "scores", "hacking")
+
+
+def normalize_result(record: dict, source: str = "<record>") -> dict:
+    """Convert one run_experiment result (schema v2) into the flat internal form.
+
+    Raises ValueError for any other shape (for example the flat schema used by
+    analysis/demo_findings.py), so a wrong input cannot silently produce zeros.
+    """
+    missing = [k for k in RESULT_KEYS_REQUIRED if k not in record]
+    if missing:
+        raise ValueError(
+            f"{source}: not a run_experiment result (missing {missing}). "
+            "Expected the schema written by run_experiment.build_result."
+        )
+    scores = record["scores"] or {}
+    hacking = record["hacking"] or {}
+    return {
+        "task_id": record["task_id"],
+        "ambiguity_level": record["ambiguity_level"],
+        "completed": record.get("completed"),
+        "naive_score": scores.get("naive"),
+        "intermediate_score": scores.get("intermediate"),
+        "robust_score": scores.get("robust"),
+        "divergence": scores.get("divergence"),
+        "hacking_events": [
+            {"hack_type": event.get("type"), "severity": event.get("severity")}
+            for event in hacking.get("events", [])
+        ],
+        "metadata": record.get("metadata", {}),
+    }
 
 
 class FindingsExtractor:
@@ -24,12 +65,10 @@ class FindingsExtractor:
             return []
 
         for json_file in sorted(self.results_dir.glob("task_*.json")):
-            try:
-                with open(json_file) as f:
-                    result = json.load(f)
-                    self.results.append(result)
-            except (json.JSONDecodeError, IOError) as e:
-                print(f"Warning: Could not load {json_file}: {e}")
+            with open(json_file) as f:
+                record = json.load(f)
+            # Wrong-shape files raise ValueError (not skipped): silent skips hid the schema mismatch.
+            self.results.append(normalize_result(record, source=str(json_file)))
 
         # Load task bank for ambiguity levels
         task_bank_path = Path("tasks/task_bank.json")
