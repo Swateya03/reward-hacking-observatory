@@ -45,7 +45,7 @@ def _fixed_strings(path: Path) -> list[str]:
 
 def test_no_chart_script_has_a_fixed_conclusion_sentence():
     scripts = sorted(CHARTS_DIR.glob("chart_*.py"))
-    assert len(scripts) == 5
+    assert len(scripts) == 6
     offenders = {}
     for script in scripts:
         hits = [s for s in _fixed_strings(script) if CONCLUSION.search(s)]
