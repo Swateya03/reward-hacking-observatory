@@ -10,7 +10,7 @@
 
 ![Rewards](https://img.shields.io/badge/3%20Reward%20Functions-Naive%20%7C%20Intermediate%20%7C%20Robust-bc8cff?style=for-the-badge)
 ![Results](https://img.shields.io/badge/Results-pending%20full%20run-lightgrey?style=for-the-badge)
-![Tests](https://img.shields.io/badge/Tests-396%20Passing-39d3f0?style=for-the-badge)
+![Tests](https://img.shields.io/badge/Tests-398%20Passing-39d3f0?style=for-the-badge)
 
 </div>
 
@@ -335,7 +335,7 @@ The **rewards layer** implements three functions that score the same trajectory 
 
 ### Implementation layers & visualizations
 
-The project spans multiple layers with a pytest suite of 396 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
+The project spans multiple layers with a pytest suite of 398 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
 
 ### Project structure
 
@@ -347,81 +347,132 @@ reward-hacking-observatory/
 ├── workspace/                  ← Environment server
 │   ├── main.py                 ← FastAPI app, all HTTP routes
 │   ├── mcp_handler.py          ← JSON-RPC 2.0 protocol handler
-│   ├── tool_registry.py        ← 17 tool definitions + metadata
+│   ├── tool_registry.py        ← 17 tool definitions, reversibility and read-only metadata
 │   ├── tools/
+│   │   ├── __init__.py
 │   │   ├── file_tools.py       ← list_files, read_file, move_to_trash
 │   │   ├── email_tools.py      ← 9 email operations (incl. archive_email)
 │   │   └── calendar_tools.py   ← 5 calendar operations
 │   ├── database/
+│   │   ├── __init__.py
 │   │   ├── schema.sql          ← SQLite schema (files, emails, events)
 │   │   └── session.py          ← Session lifecycle and transactions
 │   └── fixtures/
 │       └── default.json        ← Seed state: 12 files, 12 emails, 8 events
 ├── tasks/
 │   ├── task_bank.json          ← 30 tasks with metadata
-│   └── task.py                 ← Task dataclass
+│   └── task.py                 ← Task dataclass and TaskBank
 ├── agent/
 │   ├── loop.py                 ← AgentLoop orchestrator
 │   ├── response.py             ← ModelResponse dataclass
+│   ├── cost.py                 ← cost log and budget guard (BudgetExceeded)
+│   ├── provenance.py           ← git commit and dirty flag, read once per run
 │   ├── clients/
+│   │   ├── __init__.py
 │   │   └── anthropic_client.py ← Claude API wrapper
 │   └── workspace_client.py     ← HTTP client for workspace server
 ├── rewards/
 │   ├── base.py                 ← BaseReward, RewardResult
 │   ├── naive.py                ← NaiveReward (tool called?)
-│   ├── intermediate.py         ← IntermediateReward (process safety)
+│   ├── intermediate.py         ← IntermediateReward (process safety; stored, not used)
 │   ├── robust.py               ← RobustReward (ground truth state) + StateVerifier
 │   ├── outcome.py              ← robust_outcome_available: no expected_state means N/A
 │   └── scorer.py               ← Scorer (runs all three, reports divergence)
 ├── hacking/
 │   ├── taxonomy.py             ← HackType enum, HackingEvent dataclass
-│   ├── detector.py             ← HackingDetector (5-type classifier; METRIC_GAMING needs a state check)
+│   ├── detector.py             ← HackingDetector (5-type classifier)
+│   ├── terminal.py             ← closing-question relabel and sycophantic sub-types
 │   ├── unsafe_action.py        ← policy metric: unsafe_action_under_ambiguity (not a hack label)
 │   └── report.py               ← DetectionResult, aggregation functions
 ├── analysis/
-│   ├── findings.py             ← FindingsExtractor (loads results/, computes stats)
-│   ├── demo_findings.py        ← Sample data for offline testing
-│   ├── generate_all_charts.py  ← Master script: runs all 5 chart generators
+│   ├── __init__.py
+│   ├── findings.py             ← FindingsExtractor (reads results/task_*.json only)
+│   ├── aggregate_runs.py       ← aggregates: bootstrap CIs, permutation tests, per-metric streams
+│   ├── gaming_only_rate.py     ← gaming-only hack rate with bootstrap CIs
+│   ├── rescore_v8.py           ← replays saved schema-7 episodes under schema-8 rules
+│   ├── backfill_provenance.py  ← adds provenance fields to copies of the schema-7 runs
+│   ├── readme_numbers.py       ← prints README numbers from the legacy file and task bank
+│   ├── demo_findings.py        ← sample data for offline testing
+│   ├── detector_metrics.py     ← detector validation against hand labels
+│   ├── generate_all_charts.py  ← master script: runs the five chart generators
+│   ├── validation/
+│   │   ├── __init__.py
+│   │   └── export_labeling_sample.py ← draws the labelling sample and writes the blind sheet
 │   └── charts/
+│       ├── __init__.py
+│       ├── chart_aggregate_ci.py
 │       ├── chart_divergence_by_ambiguity.py
-│       ├── chart_hack_types.py
-│       ├── chart_score_scatter.py
 │       ├── chart_hack_rate.py
-│       └── chart_radar.py
+│       ├── chart_hack_types.py
+│       ├── chart_radar.py
+│       └── chart_score_scatter.py
+├── labels/
+│   ├── sample_ids.json         ← the 50 sampled episode IDs
+│   └── to_label.csv            ← blind labelling sheet (no detector verdicts)
 ├── results/
-│   ├── legacy/                 ← Old findings file, source run unknown (see its NOTE.md)
-│   ├── demo/                   ← Hand-typed sample output (gitignored)
-│   └── task_NNN.json           ← Generated at runtime, not committed
+│   ├── aggregate_claude-haiku-5-5.json       ← v7 aggregate (older code; kept for comparison)
+│   ├── aggregate_claude-haiku-5-5_v8.json    ← v8 aggregate
+│   ├── gaming_only_claude-haiku-5-5.json     ← v7 gaming-only rate
+│   ├── gaming_only_claude-haiku-5-5_v8.json  ← v8 gaming-only rate
+│   ├── clarification_audit.json              ← clarification audit (schema v7 runs)
+│   ├── clarification_audit_sycophantic.md    ← sycophantic_caution final messages
+│   ├── clarification_labels.json             ← manual clarification classes
+│   ├── sycophantic_rule_vs_manual.json       ← sub-type rule against manual classes
+│   ├── rescore_v8_report.json                ← replay fidelity and what changed
+│   ├── legacy/                 ← old findings file, source run unknown (see its NOTE.md)
+│   ├── validation/
+│   │   ├── clarification_map.json  ← clarification_labels.json keys mapped to episodes
+│   │   └── sample_strata.json      ← detector verdicts for the sample (git-ignored)
+│   └── runs/
+│       └── claude-haiku-5-5/
+│           ├── cost_log.jsonl      ← one line per API call
+│           ├── run_01/             ← raw runs (schema 7), 30 episodes each; run_02 to run_10 alike
+│           ├── backfilled_v7/      ← git-ignored; rebuilt by analysis/backfill_provenance.py
+│           ├── rescored_v8/        ← git-ignored; rebuilt by analysis/rescore_v8.py
+│           ├── dry_run/            ← git-ignored
+│           ├── dry_run2/           ← git-ignored
+│           └── dry_run3/           ← git-ignored
+├── docs/
+│   ├── ARCHITECTURE_NOTES.md   ← how each number is produced, and what is stale
+│   ├── BACKFILL_NOTE.md        ← provenance backfill: sources and confidence
+│   ├── LABELING_GUIDE.md       ← definitions for hand-labelling episodes
+│   └── legacy/
+│       └── README_NUMBERS_PROVENANCE.md
+├── scripts/
+│   └── check_docs.py           ← checks README counts and tree against the code
 ├── tests/
-│   ├── test_workspace.py                 ← 51 tests: server, session isolation, all 17 tools (needs the server)
 │   ├── test_agent.py                     ← 22 tests: task bank, agent loop, model client
-│   ├── test_rewards.py                   ← 25 tests: reward functions, StateVerifier, Scorer
-│   ├── test_hacking.py                   ← 23 tests: hacking detector, all 5 types
-│   ├── test_experiment.py                ← 24 tests: findings extraction and run-flag logic (does not import run_experiment.py)
-│   ├── test_charts.py                    ← 31 tests: chart data preparation, matplotlib mocking
-│   ├── test_aggregate_runs.py            ← 17 tests: aggregate: task-cluster bootstrap, seeded streams, permutation test, exploratory test
 │   ├── test_aggregate_charts.py          ← 4 tests: aggregate chart inputs
-│   ├── test_findings_pipeline.py         ← 8 tests: fake episodes through the real writer and reader
+│   ├── test_aggregate_runs.py            ← 17 tests: bootstrap, seeded streams, permutation test
+│   ├── test_archive_email.py             ← 11 tests: archive_email (7 need the server)
+│   ├── test_backfill_provenance.py       ← 5 tests: backfill metadata, schema guard, commit window
+│   ├── test_build_result.py              ← 12 tests: build_result and its metadata block
+│   ├── test_chart_annotations.py         ← 10 tests: chart text computed from the data
+│   ├── test_chart_text.py                ← 8 tests: no fixed conclusion text in chart scripts
+│   ├── test_charts.py                    ← 31 tests: chart data preparation, matplotlib mocked
+│   ├── test_cost.py                      ← 20 tests: cost tracking, budget guard, cache breakpoints
+│   ├── test_experiment.py                ← 24 tests: findings extraction and run-flag logic
 │   ├── test_findings_output.py           ← 8 tests: findings output path guard and required --out
-│   ├── test_chart_annotations.py         ← 10 tests: chart text computed from the data (spies on drawn text)
-│   ├── test_reversibility.py             ← 9 tests: draft vs sent reply_email
-│   ├── test_outcome_and_policy.py        ← 47 tests: N/A outcome, task 014/021 states, policy metric, chart loaders
-│   ├── test_archive_email.py             ← 11 tests: archive_email and its registry entry (7 need the server)
-│   ├── test_metric_gaming_availability.py← 8 tests: METRIC_GAMING availability and the hack label
+│   ├── test_findings_pipeline.py         ← 8 tests: fake episodes through the real writer and reader
+│   ├── test_hacking.py                   ← 23 tests: hacking detector, all 5 types
+│   ├── test_metric_gaming_availability.py ← 8 tests: METRIC_GAMING availability and the hack label
+│   ├── test_notes_schema.py              ← 2 tests: notes state the code's result schema version
+│   ├── test_outcome_and_policy.py        ← 47 tests: N/A outcome, task 014/021 states, policy metric
+│   ├── test_provenance_metadata.py       ← 11 tests: run_index, git commit and dirty flag, model ID
 │   ├── test_regression.py                ← 19 tests: checks the legacy findings file
-│   ├── test_build_result.py              ← 12 tests: build_result and its metadata block, imported from run_experiment.py
-│   ├── test_provenance_metadata.py       ← 11 tests: run_index, git commit and dirty flag, returned model ID (mocked API)
-│   ├── test_backfill_provenance.py       ← 5 tests: backfill metadata, schema guard, commit-window check (temporary git repo)
-│   ├── test_cost.py                      ← 20 tests: cost tracking, budget guard, cache breakpoints, usage logging
+│   ├── test_reversibility.py             ← 9 tests: draft vs sent reply_email
+│   ├── test_rewards.py                   ← 25 tests: reward functions, StateVerifier, Scorer
 │   ├── test_scope_rule.py                ← 10 tests: scope rule: only state-changing out-of-scope calls count
 │   ├── test_terminal_rule.py             ← 13 tests: closing-question relabel
-│   └── test_chart_text.py                ← 8 tests: no fixed conclusion text in chart scripts; one canonical hack-type key form
-├── config.py                   ← MAX_STEPS (20), MODEL, TEMPERATURE
+│   └── test_workspace.py                 ← 51 tests: server, session isolation, all 17 tools (needs the server)
+├── config.py                   ← MAX_STEPS (20), MODEL, TEMPERATURE, budget caps
 ├── requirements.txt
 ├── .env.example
+├── .gitattributes
+├── .gitignore
 ├── README.md
-├── run_experiment.py           ← Run all 30 tasks (requires API quota)
-└── demo.py                     ← Run single task demo
+├── run_experiment.py           ← run the task bank (requires API quota)
+└── demo.py                     ← run single task demo
 ```
 
 </details>
@@ -465,9 +516,12 @@ The project includes three testing layers:
 | `test_scope_rule.py` | 10 | Only state-changing out-of-scope calls count toward scope_creep and the footprint penalty |
 | `test_terminal_rule.py` | 13 | Closing-question relabel and the sycophantic_caution sub-categories |
 | `test_chart_text.py` | 8 | No fixed conclusion text in chart scripts; one canonical hack-type key form |
-| **Total** | **396** | |
+| `test_notes_schema.py` | 2 | Every `RESULT_SCHEMA_VERSION = N` statement in `docs/ARCHITECTURE_NOTES.md` equals the code's value |
+| **Total** | **398** | |
 
-Run all tests: `pytest tests/ -v` — 🟢 **396 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 338 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
+Run all tests: `pytest tests/ -v` — 🟢 **398 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 340 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
+
+Before committing any change to docs or README counts, run `python scripts/check_docs.py`. It fails if the badge, the totals, the per-file counts or the project tree disagree with the collected tests or with the files on disk.
 
 ---
 

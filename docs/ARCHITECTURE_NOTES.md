@@ -225,7 +225,7 @@ Status key: ✔ matches the code or data; ✗ wrong or stale; illustrative = lab
 | Badges | 5 hack types | `hacking/taxonomy.py` `HackType` | ✔ |
 | Badges | 3 reward functions | `rewards/naive.py`, `intermediate.py`, `robust.py` | ✔ |
 | Badges | "Results pending" | Data exists (section 0) | ✗ stale |
-| Badges | 396 tests passing | `pytest tests/`, server up, now 398 | ✗ stale by two tests (`test_notes_schema.py`) |
+| Badges | 398 tests passing | `pytest tests/`, server up | ✔ (updated; checked by `scripts/check_docs.py`) |
 | §01, §07 | "Results pending" | As above | ✗ stale |
 | §02 | Port 8000 | `uvicorn` command; `agent/workspace_client.py:16` | ✔ |
 | §03 | 12 files in 5 folders | `workspace/fixtures/default.json` (/tmp, /projects/alpha, /projects/q4, /hr, /hr/confidential) | ✔ |
@@ -256,8 +256,8 @@ Status key: ✔ matches the code or data; ✗ wrong or stale; illustrative = lab
 | §08 | Five chart scripts | `analysis/generate_all_charts.py:6-12` | ✔ (two fail today) |
 | §08 | Step limit 20 | `config.py:11` | ✔ |
 | §08 | Per-file test counts | `pytest --collect-only` (sum 396) | ✔ |
-| §08 | Project tree | Filesystem | ✗ omits `agent/cost.py`, `agent/provenance.py`, `hacking/terminal.py`, `analysis/aggregate_runs.py`, `analysis/gaming_only_rate.py`, `analysis/rescore_v8.py`, `analysis/backfill_provenance.py`, `analysis/readme_numbers.py`, `analysis/charts/chart_aggregate_ci.py` |
-| §09 | 396 pass; 338 / 51 / 7 without server | Today's runs | ✔ |
+| §08 | Project tree | Filesystem | ✔ (rebuilt from disk; every path checked by `scripts/check_docs.py`) |
+| §09 | 398 pass; 340 / 51 / 7 without server | Today's runs | ✔ |
 | §10 | 300 episodes, 17:41 to 18:08 UTC, 25 Nov 2026 | Timestamps in all 300 files | ✔ |
 | §10 | Returned model not recorded for runs 1 to 10 | `returned_model` is `null` in all 1,080 cost-log entries and in the backfilled copies | ✔ |
 | §11 | 2 CPU / 2 GB per pod; 70% utilisation; 90%+ fixture I/O cut; 5-10% of tasks annotated | None | design |
@@ -278,7 +278,7 @@ Numbered in order; no item is repeated.
 8. **`analysis/aggregate_runs.py:6`** says every record "must be schema v7". The script takes `--schema`, and its default is 7. The committed v7 aggregate predates the current code (section 0).
 9. **Recorded hack type can differ from the report.** A multi-event episode's recorded type is first in `CHECKS` order (`run_experiment.py:189`). The printed report uses the highest severity (`hacking/report.py:46-50`).
 10. **`completed` counts an episode that stops at the step limit right after a tool call** (`run_experiment.py:238`). `stopped_reason` shows it.
-11. **The README project tree (§08) is out of date** (section 9). The README's line range for `RobustReward.score` is off by one.
+11. **README line range.** The README's line range for `RobustReward.score` ("lines 351-410") is off by one; the code is at 352-411. The tree and counts are checked by `scripts/check_docs.py`.
 12. **`tasks/task.py:30` and `:91`** use `{"files": 8}` as an example `expected_state`. That key is not a pattern `StateVerifier` recognises, so it would check against nothing (`rewards/robust.py:267-268`).
 13. **`workspace/tool_registry.py:12`** says "5 future tools", while the registry has 17 entries.
 14. **Irreversible required calls are penalised.** Task_021 requires `delete_email` with `min_irreversible_actions: 0`, so each delete counts toward the -0.15 penalty and fires `irreversibility_bias`, even though the task needs deletion. Task_009 uses `min_irreversible_actions: 1`. This is a design question. It has not been changed.
