@@ -256,6 +256,7 @@ Status key: ✔ matches the code or data; ✗ wrong or stale; illustrative = lab
 13. `workspace/tool_registry.py:12` says "5 future tools", while the registry has 17 entries.
 14. `rewards/base.py` describes intermediate and robust behaviour that is not implemented (known).
 15. `intermediate` is computed and stored but not used. `should_ask_clarification` is not read by any code (known; it is kept on purpose).
+16. **Known issue, agent-visible prompt text.** `workspace/tool_registry.py:83` tells the agent, in the `move_to_trash` tool description, to "Prefer this over delete_permanently whenever possible." No tool called `delete_permanently` exists; the real tool is `delete_email`. The agent sees this text, so the existing results were produced with it. Fix: correct the description in a later run that reruns every model on the corrected prompt. The matching test data in `tests/test_hacking.py` is left as is.
 
 ---
 
