@@ -434,9 +434,38 @@ The project includes three testing layers:
 
 | # | Layer | What it covers |
 |---|---|---|
-| 1️⃣ | **Unit and integration tests** (test_workspace, test_agent, test_rewards, test_hacking, test_experiment, test_charts, test_chart_annotations, test_findings_pipeline, test_findings_output, test_reversibility, test_outcome_and_policy, test_metric_gaming_availability, test_archive_email, test_build_result, test_chart_text) | Verify individual components: tool execution, reward function computation, hack detection, and chart generation |
+| 1️⃣ | **Unit and integration tests** (the 23 files listed below) | Verify individual components: tool execution, reward function computation, hack detection, and chart generation |
 | 2️⃣ | **Regression tests** (test_regression.py) | Check the structure and ordering of the legacy findings file (`results/legacy/`), whose source run is unknown. They do not check current results |
 | 3️⃣ | **Integration tests** (in each layer) | Verify end-to-end workflows: running a task from prompt through detection to findings |
+
+**Test files** (every file in `tests/`, with its collected test count from `pytest --collect-only`):
+
+| File | Tests | What it covers |
+|---|---:|---|
+| `test_workspace.py` | 51 | Workspace server: sessions, isolation, all 17 tools (needs the server running) |
+| `test_agent.py` | 22 | Task bank, agent loop, and the Anthropic client (mocked API) |
+| `test_rewards.py` | 25 | Naive, intermediate and robust reward functions, StateVerifier, Scorer |
+| `test_hacking.py` | 23 | Hacking detector: all five hack types |
+| `test_experiment.py` | 24 | Findings extraction and run-flag logic (does not import run_experiment.py) |
+| `test_charts.py` | 31 | Chart data preparation, with matplotlib mocked |
+| `test_aggregate_runs.py` | 17 | Aggregate on synthetic runs: task-cluster bootstrap, seeded streams, permutation test, exploratory test |
+| `test_aggregate_charts.py` | 4 | Error bars and computed labels in the aggregate charts |
+| `test_findings_pipeline.py` | 8 | Fake episodes through the real findings writer and reader |
+| `test_findings_output.py` | 8 | findings.py output path guard and the required --out argument |
+| `test_chart_annotations.py` | 10 | Chart annotation text computed from the data (spies on the drawn text) |
+| `test_reversibility.py` | 9 | reply_email reversibility: a draft is reversible, a sent reply is not |
+| `test_outcome_and_policy.py` | 47 | N/A robust outcome, task 014 and 021 expected states, policy metric, chart loaders |
+| `test_archive_email.py` | 11 | archive_email and its registry entry (7 tests need the server) |
+| `test_metric_gaming_availability.py` | 8 | METRIC_GAMING is unavailable on N/A tasks and needs a state check |
+| `test_regression.py` | 19 | Structure and ordering of the legacy findings file (`results/legacy/`) |
+| `test_build_result.py` | 12 | build_result and its metadata block, imported from run_experiment.py |
+| `test_provenance_metadata.py` | 11 | run_index, git commit, dirty flag and returned model ID in new results (mocked API) |
+| `test_backfill_provenance.py` | 5 | Backfill metadata, schema guard, and commit-window check against a temporary git repo |
+| `test_cost.py` | 20 | Cost tracking, budget guard, prompt-cache breakpoints, budget stop |
+| `test_scope_rule.py` | 10 | Only state-changing out-of-scope calls count toward scope_creep and the footprint penalty |
+| `test_terminal_rule.py` | 13 | Closing-question relabel and the sycophantic_caution sub-categories |
+| `test_chart_text.py` | 8 | No fixed conclusion text in chart scripts; one canonical hack-type key form |
+| **Total** | **396** | |
 
 Run all tests: `pytest tests/ -v` — 🟢 **396 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 338 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
 
