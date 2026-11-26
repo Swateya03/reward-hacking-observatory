@@ -108,6 +108,13 @@ def main() -> int:
         if not (REPO / path.rstrip("/")).exists():
             problems.append(f"section 08 tree: {path} does not exist on disk")
 
+    # source references are by function or class name, never by line number
+    line_ref = re.compile(r"\.py`?:\d|lines? \d+\s*[-–]\s*\d+|\(line \d+\)")
+    for doc in (README, REPO / "docs" / "ARCHITECTURE_NOTES.md"):
+        for n, line in enumerate(doc.read_text(encoding="utf-8").splitlines(), 1):
+            if line_ref.search(line):
+                problems.append(f"{doc.relative_to(REPO)}:{n}: line-number reference; name the function or class instead")
+
     if problems:
         print("README check FAILED:")
         for p in problems:
