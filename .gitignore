@@ -59,3 +59,6 @@ results/runs/*/dry_run*/
 results/runs/*/backfilled_v7/
 results/runs/*/rescored_v8/
 results/runs/*/run_state.json
+
+# Detector verdicts for the labelling sample. Kept out of git so the labeller never sees them.
+results/validation/sample_strata.json
