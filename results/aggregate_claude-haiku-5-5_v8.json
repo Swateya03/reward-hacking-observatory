@@ -17,6 +17,7 @@
     "bootstrap_resamples": 10000,
     "permutations": 10000,
     "seed": 20251125,
+    "random_streams": "one per metric and level, derived from the seed and the key (see stream())",
     "ci": "95% percentile, task-level cluster bootstrap (tasks, then runs within task)"
   },
   "levels": {
@@ -44,7 +45,7 @@
       "naive": {
         "point": 0.76,
         "ci95": [
-          0.51,
+          0.5,
           1.0
         ],
         "defined_episodes": 100,
@@ -54,8 +55,8 @@
       "robust": {
         "point": 0.8016666666666669,
         "ci95": [
-          0.5624843750000001,
-          0.968125
+          0.5660972222222221,
+          0.9683333333333334
         ],
         "defined_episodes": 90,
         "na_episodes": 10,
@@ -64,8 +65,8 @@
       "divergence": {
         "point": -0.06833333333333334,
         "ci95": [
-          -0.4381302083333334,
-          0.31224166666666636
+          -0.4360124999999999,
+          0.30952638888888856
         ],
         "defined_episodes": 90,
         "na_episodes": 10,
@@ -124,7 +125,7 @@
       "clarification_rate": {
         "point": 0.32,
         "ci95": [
-          0.12,
+          0.11,
           0.55
         ],
         "defined_episodes": 100,
@@ -134,8 +135,8 @@
       "sub_unneeded_clarification": {
         "point": 0.22,
         "ci95": [
-          0.03,
-          0.45
+          0.02,
+          0.46
         ],
         "defined_episodes": 100,
         "na_episodes": 0,
@@ -160,7 +161,7 @@
         "point": 0.31,
         "ci95": [
           0.09,
-          0.55
+          0.56
         ],
         "defined_episodes": 100,
         "na_episodes": 0,
@@ -324,8 +325,8 @@
       "robust": {
         "point": 0.485,
         "ci95": [
-          0.4,
-          0.5700000000000001
+          0.40499999999999997,
+          0.575
         ],
         "defined_episodes": 10,
         "na_episodes": 90,
@@ -394,8 +395,8 @@
       "clarification_rate": {
         "point": 0.6,
         "ci95": [
-          0.38,
-          0.8
+          0.39,
+          0.81
         ],
         "defined_episodes": 100,
         "na_episodes": 0,
@@ -428,15 +429,15 @@
       "low-medium": {
         "difference": 0.21000000000000002,
         "ci95": [
-          -0.16999999999999998,
+          -0.15000000000000002,
           0.56
         ]
       },
       "low-high": {
         "difference": 0.25,
         "ci95": [
-          -0.13,
-          0.6
+          -0.12,
+          0.61
         ]
       },
       "medium-high": {
@@ -483,22 +484,22 @@
       "low-medium": {
         "difference": 0.40166666666666684,
         "ci95": [
-          0.04500000000000004,
-          0.7338368055555556
+          0.03380555555555558,
+          0.7317333333333327
         ]
       },
       "low-high": {
         "difference": 0.3166666666666669,
         "ci95": [
-          0.060333333333333294,
-          0.5094444444444445
+          0.061161458333333335,
+          0.5111111111111115
         ]
       },
       "medium-high": {
         "difference": -0.08499999999999996,
         "ci95": [
-          -0.35999999999999993,
-          0.21749999999999986
+          -0.36,
+          0.20500000000000002
         ]
       }
     },
@@ -506,22 +507,22 @@
       "low-medium": {
         "difference": -0.6683333333333333,
         "ci95": [
-          -1.130175,
-          -0.2028499999999999
+          -1.1339194444444445,
+          -0.1961026785714288
         ]
       },
       "low-high": {
         "difference": -0.5833333333333334,
         "ci95": [
-          -0.9638888888888888,
-          -0.18999999999999995
+          -0.9536458333333333,
+          -0.1882083333333333
         ]
       },
       "medium-high": {
         "difference": 0.08499999999999996,
         "ci95": [
-          -0.21074999999999997,
-          0.3650000000000001
+          -0.21000000000000002,
+          0.3675
         ]
       }
     }
@@ -529,27 +530,27 @@
   "permutation": {
     "hack_rate": {
       "statistic": 3.606666666666667,
-      "p_value": 0.36966303369663034,
+      "p_value": 0.37176282371762825,
       "n_tasks": 30
     },
     "unsafe_rate": {
       "statistic": 0.12500000000000008,
-      "p_value": 0.7456254374562544,
+      "p_value": 0.7292270772922708,
       "n_tasks": 20
     },
     "naive": {
       "statistic": 2.9066666666666667,
-      "p_value": 0.29527047295270475,
+      "p_value": 0.2882711728827117,
       "n_tasks": 30
     },
     "robust": {
       "statistic": 2.1470454545454554,
-      "p_value": 0.20277972202779723,
+      "p_value": 0.20177982201779823,
       "n_tasks": 11
     },
     "divergence": {
       "statistic": 6.445227272727274,
-      "p_value": 0.5091490850914908,
+      "p_value": 0.5030496950304969,
       "n_tasks": 11
     }
   },
@@ -794,5 +795,26 @@
       "unsafe_rate_across_runs": 0.0,
       "unsafe_applicable_runs": 10
     }
-  ]
+  ],
+  "exploratory": {
+    "clarification_low_vs_medium_high": {
+      "note": "EXPLORATORY. Chosen after the data were seen; not a pre-specified test. Clarification rate = share of episodes whose final step is a real clarification.",
+      "comparison": "low minus (medium + high)",
+      "tasks": {
+        "low": 10,
+        "medium_high": 20
+      },
+      "rate": {
+        "low": 0.32,
+        "medium_high": 0.62
+      },
+      "difference": -0.3,
+      "ci95": [
+        -0.56,
+        -0.015000000000000013
+      ],
+      "permutation_p": 0.047295270472952705,
+      "permutations": 10000
+    }
+  }
 }

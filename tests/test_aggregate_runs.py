@@ -227,3 +227,60 @@ def test_refuses_a_run_missing_tasks(tmp_path):
     (root / "run_02" / "task_001.json").unlink()
     with pytest.raises(ValueError, match="missing tasks"):
         _agg(root)
+
+
+# ── per-metric random streams and the exploratory test ───────────────────────
+
+def _random_layout(tmp_path):
+    def ep(r, t, level, k):
+        return _record(t, level, (k * 7 + r * 3) % 5 < 2, robust=(None if k % 3 == 0 else 0.2 + 0.1 * (k % 4)),
+                       naive=1.0 if (k + r) % 2 == 0 else 0.0,
+                       checks={"scope_creep": (True, (k + r) % 4 == 0)})
+    return _write_layout(tmp_path, ep)
+
+
+def test_adding_a_dummy_metric_leaves_every_other_interval_unchanged(tmp_path):
+    from analysis.aggregate_runs import analyse
+    runs = load_episodes(_random_layout(tmp_path))
+    base = analyse(runs, n_boot=800, n_perm=800, seed=11)
+    dummy = {"dummy_metric": (lambda e: 1.0 if e["naive"] == 1.0 else 0.0, lambda e: 1.0)}
+    extra = analyse(runs, n_boot=800, n_perm=800, seed=11, extra_metrics=dummy)
+    assert "dummy_metric" in extra["levels"]["low"] and "dummy_metric" not in base["levels"]["low"]
+    for lv in base["levels"]:
+        for name, entry in base["levels"][lv].items():
+            if name in ("tasks", "runs", "episodes"):
+                continue
+            assert extra["levels"][lv][name] == entry, (lv, name)
+    assert extra["pairwise"] == base["pairwise"]
+    assert extra["permutation"] == base["permutation"]
+
+
+def test_streams_depend_on_the_key_only():
+    from analysis.aggregate_runs import stream
+    a = stream(5, "boot", "hack_rate", "low").integers(0, 10**9, size=5)
+    b = stream(5, "boot", "hack_rate", "low").integers(0, 10**9, size=5)
+    c = stream(5, "boot", "naive", "low").integers(0, 10**9, size=5)
+    assert list(a) == list(b)
+    assert list(a) != list(c)
+
+
+def test_exploratory_clarification_difference_has_a_known_answer(tmp_path):
+    from analysis.aggregate_runs import analyse
+    def ep(r, t, level, k):
+        rec = _record(t, level, False)
+        if level == "low":
+            rec["trajectory"] = []
+        rec["completion_type"] = "clarification" if level == "low" else "completion"
+        return rec
+    # low: every episode is a clarification; medium and high: none
+    def ep2(r, t, level, k):
+        rec = _record(t, level, False)
+        rec["completion_type"] = "clarification" if level == "low" else "completion"
+        return rec
+    runs = load_episodes(_write_layout(tmp_path, ep2))
+    ex = analyse(runs, **FAST)["exploratory"]["clarification_low_vs_medium_high"]
+    assert ex["rate"] == {"low": 1.0, "medium_high": 0.0}
+    assert ex["difference"] == pytest.approx(1.0)
+    assert ex["ci95"] == [1.0, 1.0]
+    assert ex["permutation_p"] < 0.01
+    assert "EXPLORATORY" in ex["note"]

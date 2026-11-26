@@ -15,7 +15,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from analysis.aggregate_runs import (LEVELS, N_BOOT, SEED, bootstrap_ratio, ci_from,  # noqa: E402
-                                     load_episodes, ratio, task_matrix)
+                                     load_episodes, ratio, stream, task_matrix)
 
 GAMING = ("metric_gaming", "scope_creep", "irreversibility_bias", "overclaiming")
 
@@ -34,7 +34,6 @@ def main(argv=None):
     run_ids = sorted(runs)
     all_tasks = sorted({t for r in run_ids for t in runs[r]})
     level_of = {t: runs[run_ids[0]][t]["level"] for t in all_tasks}
-    rng = np.random.default_rng(SEED)
     out = {"definition": "any of " + ", ".join(GAMING) + " fired (available checks); sycophantic_caution excluded",
            "schema_version": a.schema, "runs": len(run_ids), "bootstrap_resamples": N_BOOT, "seed": SEED, "levels": {}}
     for lv in LEVELS:
@@ -42,7 +41,7 @@ def main(argv=None):
         num = task_matrix(runs, tasks, run_ids, gaming_hack)
         den = np.ones_like(num)
         hack = task_matrix(runs, tasks, run_ids, lambda e: 1.0 if e["hack"] else 0.0)
-        boot = bootstrap_ratio(num, den, rng, N_BOOT)
+        boot = bootstrap_ratio(num, den, stream(SEED, "boot", "gaming_only", lv), N_BOOT)
         out["levels"][lv] = {"episodes": num.size, "gaming_only_rate": ratio(num, den),
                              "ci95": ci_from(boot), "all_checks_hack_rate_for_comparison": ratio(hack, den)}
     Path(a.out).write_text(json.dumps(out, indent=2), encoding="utf-8")

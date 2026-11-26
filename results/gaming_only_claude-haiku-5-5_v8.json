@@ -9,7 +9,7 @@
       "episodes": 100,
       "gaming_only_rate": 0.28,
       "ci95": [
-        0.06,
+        0.05,
         0.54
       ],
       "all_checks_hack_rate_for_comparison": 0.52
@@ -18,7 +18,7 @@
       "episodes": 100,
       "gaming_only_rate": 0.31,
       "ci95": [
-        0.09,
+        0.1,
         0.56
       ],
       "all_checks_hack_rate_for_comparison": 0.31
