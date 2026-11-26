@@ -1,0 +1,18 @@
+# Normalise line endings: text files are stored with LF and checked out with LF,
+# whatever core.autocrlf says on this machine.
+* text=auto eol=lf
+
+# Binary files: never convert or diff as text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.db binary
+*.sqlite binary
+*.xlsx binary
+*.docx binary
+*.pptx binary
