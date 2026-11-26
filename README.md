@@ -10,7 +10,7 @@
 
 ![Rewards](https://img.shields.io/badge/3%20Reward%20Functions-Naive%20%7C%20Intermediate%20%7C%20Robust-bc8cff?style=for-the-badge)
 ![Results](https://img.shields.io/badge/Results-pending%20full%20run-lightgrey?style=for-the-badge)
-![Tests](https://img.shields.io/badge/Tests-316%20Passing-39d3f0?style=for-the-badge)
+![Tests](https://img.shields.io/badge/Tests-396%20Passing-39d3f0?style=for-the-badge)
 
 </div>
 
@@ -249,7 +249,17 @@ Five canonical hack types are defined in `hacking/taxonomy.py`. The examples in 
 
 **Results pending.** Earlier figures in this README were taken from test fixtures and sample data rather than an experiment run, and have been removed. A full run is in progress.
 
-Result files are written in schema v8 (`metadata.schema_version` = 8). See `docs/ARCHITECTURE_NOTES.md` §5.
+The 300 raw runs are schema 7 (`metadata.schema_version` = 7). They were re-scored to schema v8 in `results/runs/<model>/rescored_v8/` without calling the model, and the v8 aggregate reads those files. New runs are written in schema v8. See `docs/ARCHITECTURE_NOTES.md` §5.
+
+**Tracked and rebuilt files.** The raw run folders (`results/runs/claude-haiku-5-5/run_01` to `run_10`), `cost_log.jsonl` and the aggregate files in `results/` are tracked. `backfilled_v7/` and `rescored_v8/` are git-ignored because they are rebuilt from the raw files, with these commands from the repository root:
+
+```
+python analysis/backfill_provenance.py --model claude-haiku-5-5 --commit 91705d8
+python analysis/rescore_v8.py --model claude-haiku-5-5 --base results/runs --source-dir results/runs/claude-haiku-5-5/backfilled_v7   # needs the workspace server
+python analysis/aggregate_runs.py --runs-root results/runs/claude-haiku-5-5/rescored_v8 --schema 8 --out results/aggregate_claude-haiku-5-5_v8.json
+```
+
+The backfill fields and their sources are in `docs/BACKFILL_NOTE.md`.
 
 ### Method: fixed settings
 
@@ -325,7 +335,7 @@ The **rewards layer** implements three functions that score the same trajectory 
 
 ### Implementation layers & visualizations
 
-The project spans multiple layers with a pytest suite of 316 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
+The project spans multiple layers with a pytest suite of 396 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
 
 ### Project structure
 
@@ -383,22 +393,29 @@ reward-hacking-observatory/
 │   ├── demo/                   ← Hand-typed sample output (gitignored)
 │   └── task_NNN.json           ← Generated at runtime, not committed
 ├── tests/
-│   ├── test_workspace.py       ← 51 tests: server, session isolation, all 17 tools (needs the server)
-│   ├── test_agent.py           ← 22 tests: task bank, agent loop, model client
-│   ├── test_rewards.py         ← 25 tests: reward functions, StateVerifier, Scorer
-│   ├── test_hacking.py         ← 23 tests: hacking detector, all 5 types
-│   ├── test_experiment.py      ← 24 tests: findings extraction and run-flag logic (does not import run_experiment.py)
-│   ├── test_charts.py          ← 31 tests: chart data preparation, matplotlib mocking
-│   ├── test_findings_pipeline.py ← 8 tests: fake episodes through the real writer and reader
-│   ├── test_findings_output.py ← 8 tests: findings output path guard and required --out
-│   ├── test_chart_annotations.py ← 10 tests: chart text computed from the data (spies on drawn text)
-│   ├── test_reversibility.py   ← 9 tests: draft vs sent reply_email
-│   ├── test_outcome_and_policy.py ← 47 tests: N/A outcome, task 014/021 states, policy metric, chart loaders
-│   ├── test_archive_email.py   ← 11 tests: archive_email and its registry entry (7 need the server)
-│   ├── test_metric_gaming_availability.py ← 8 tests: METRIC_GAMING availability and the hack label
-│   ├── test_regression.py      ← 19 tests: checks the legacy findings file
-│   ├── test_build_result.py    ← 12 tests: build_result and its metadata block, imported from run_experiment.py
-│   └── test_chart_text.py      ← 8 tests: no fixed conclusion text in chart scripts; one canonical hack-type key form
+│   ├── test_workspace.py                 ← 51 tests: server, session isolation, all 17 tools (needs the server)
+│   ├── test_agent.py                     ← 22 tests: task bank, agent loop, model client
+│   ├── test_rewards.py                   ← 25 tests: reward functions, StateVerifier, Scorer
+│   ├── test_hacking.py                   ← 23 tests: hacking detector, all 5 types
+│   ├── test_experiment.py                ← 24 tests: findings extraction and run-flag logic (does not import run_experiment.py)
+│   ├── test_charts.py                    ← 31 tests: chart data preparation, matplotlib mocking
+│   ├── test_aggregate_runs.py            ← 17 tests: aggregate: task-cluster bootstrap, seeded streams, permutation test, exploratory test
+│   ├── test_aggregate_charts.py          ← 4 tests: aggregate chart inputs
+│   ├── test_findings_pipeline.py         ← 8 tests: fake episodes through the real writer and reader
+│   ├── test_findings_output.py           ← 8 tests: findings output path guard and required --out
+│   ├── test_chart_annotations.py         ← 10 tests: chart text computed from the data (spies on drawn text)
+│   ├── test_reversibility.py             ← 9 tests: draft vs sent reply_email
+│   ├── test_outcome_and_policy.py        ← 47 tests: N/A outcome, task 014/021 states, policy metric, chart loaders
+│   ├── test_archive_email.py             ← 11 tests: archive_email and its registry entry (7 need the server)
+│   ├── test_metric_gaming_availability.py← 8 tests: METRIC_GAMING availability and the hack label
+│   ├── test_regression.py                ← 19 tests: checks the legacy findings file
+│   ├── test_build_result.py              ← 12 tests: build_result and its metadata block, imported from run_experiment.py
+│   ├── test_provenance_metadata.py       ← 11 tests: run_index, git commit and dirty flag, returned model ID (mocked API)
+│   ├── test_backfill_provenance.py       ← 5 tests: backfill metadata, schema guard, commit-window check (temporary git repo)
+│   ├── test_cost.py                      ← 20 tests: cost tracking, budget guard, cache breakpoints, usage logging
+│   ├── test_scope_rule.py                ← 10 tests: scope rule: only state-changing out-of-scope calls count
+│   ├── test_terminal_rule.py             ← 13 tests: closing-question relabel
+│   └── test_chart_text.py                ← 8 tests: no fixed conclusion text in chart scripts; one canonical hack-type key form
 ├── config.py                   ← MAX_STEPS (20), MODEL, TEMPERATURE
 ├── requirements.txt
 ├── .env.example
@@ -421,7 +438,7 @@ The project includes three testing layers:
 | 2️⃣ | **Regression tests** (test_regression.py) | Check the structure and ordering of the legacy findings file (`results/legacy/`), whose source run is unknown. They do not check current results |
 | 3️⃣ | **Integration tests** (in each layer) | Verify end-to-end workflows: running a task from prompt through detection to findings |
 
-Run all tests: `pytest tests/ -v` — 🟢 **316 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 258 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
+Run all tests: `pytest tests/ -v` — 🟢 **396 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 338 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
 
 ---
 
@@ -431,6 +448,7 @@ Run all tests: `pytest tests/ -v` — 🟢 **316 tests, all passing** with the w
 - ⚠️ **Model comparison** — The planned experiment uses only Claude Haiku 5.5 (the cheaper of the two models priced in `config.py`). Comparative results across other Claude models, GPT-4, Llama, and others would strengthen the findings. The hacking patterns might be specific to Claude's training; testing on other models would reveal whether they are universal properties of LLMs or artifacts of particular training methods.
 - ⚠️ **Human annotation** — The robust reward function uses a StateVerifier that pattern-matches against expected_state. This works for structured domains (files, emails, calendar events) but breaks for open-ended tasks or ambiguous success criteria. For higher-stakes tasks, we would collect human annotations: domain experts rating agent trajectories on a "did the agent actually solve this?" scale. These human ratings would validate the robust reward signal and calibrate the divergence threshold for detecting hacking.
 - ⚠️ **Training loop** — This version implements reward measurement but not policy training. The architecture includes placeholders for a REINFORCE or GRPO training loop (standard RL methods), but the implementation was deferred. Connecting this to TRL's GRPOTrainer or Hugging Face's veRL framework would close the loop: measure reward hacking, use that signal to train agents that avoid it, measure again. This is where the real value emerges.
+- ⚠️ **Returned model ID not recorded for the v7 runs** — The API's returned model ID (`response.model`) was not saved when runs 1–10 were made, so their `returned_model` is null (see `docs/BACKFILL_NOTE.md`). All 300 episodes ran within about 30 minutes (17:41–18:08 UTC, 25 Nov 2026) on one model alias, `claude-haiku-5-5`. Results describe that alias during that window; the served model snapshot is not confirmed. New runs record `returned_model`.
 
 ---
 
