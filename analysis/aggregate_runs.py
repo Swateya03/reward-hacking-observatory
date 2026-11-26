@@ -370,7 +370,7 @@ def main(argv=None):
     agg = analyse(runs, schema=args.schema)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(agg, indent=2), encoding="utf-8")
+    out.write_text(json.dumps(agg, indent=2), encoding="utf-8", newline="\n")
     print(f"wrote {out} ({len(agg['runs'])} runs, {agg['tasks']} tasks)")
 
 

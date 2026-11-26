@@ -44,7 +44,7 @@ def main(argv=None):
         boot = bootstrap_ratio(num, den, stream(SEED, "boot", "gaming_only", lv), N_BOOT)
         out["levels"][lv] = {"episodes": num.size, "gaming_only_rate": ratio(num, den),
                              "ci95": ci_from(boot), "all_checks_hack_rate_for_comparison": ratio(hack, den)}
-    Path(a.out).write_text(json.dumps(out, indent=2), encoding="utf-8")
+    Path(a.out).write_text(json.dumps(out, indent=2), encoding="utf-8", newline="\n")
     for lv in LEVELS:
         r = out["levels"][lv]
         print(f"{lv:7s} gaming-only {r['gaming_only_rate']:.3f} [{r['ci95'][0]:.3f}, {r['ci95'][1]:.3f}]  (all checks {r['all_checks_hack_rate_for_comparison']:.3f})")

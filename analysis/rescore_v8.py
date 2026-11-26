@@ -144,7 +144,7 @@ def main(argv=None):
                     new["metadata"][k] = meta[k]
             new["rescored_from"] = f"{run_dir.name}/{f.name} (schema 7, not modified)"
             new["replay"] = {"tool_calls": total, "mismatched_calls": mism}
-            (out_dir / f.name).write_text(json.dumps(new, indent=2), encoding="utf-8")
+            (out_dir / f.name).write_text(json.dumps(new, indent=2), encoding="utf-8", newline="\n")
 
             report["relabelled"] += int(relabelled)
             for e in new["hacking"]["events"]:
@@ -172,7 +172,7 @@ def main(argv=None):
 
     report["changed"] = dict(report["changed"])
     report["subtypes"] = dict(report["subtypes"])
-    Path(a.report).write_text(json.dumps(report, indent=2), encoding="utf-8")
+    Path(a.report).write_text(json.dumps(report, indent=2), encoding="utf-8", newline="\n")
     print(json.dumps({k: v for k, v in report.items() if k not in ("untouched_differences",)}, indent=2))
 
 

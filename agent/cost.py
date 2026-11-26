@@ -144,6 +144,6 @@ class CostTracker:
             "running_total_usd": round(self.total_usd, 8),
         }
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.log_path, "a", encoding="utf-8") as f:
+        with open(self.log_path, "a", encoding="utf-8", newline="\n") as f:
             f.write(json.dumps(entry) + "\n")
         return entry

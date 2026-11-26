@@ -98,7 +98,7 @@ def compute_demo_findings() -> dict:
 def main() -> None:
     findings = compute_demo_findings()
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(OUTPUT_PATH, "w") as f:
+    with open(OUTPUT_PATH, "w", encoding="utf-8", newline="\n") as f:
         json.dump(findings, f, indent=2)
     print(f"Demo findings (hand-typed sample) written to {OUTPUT_PATH}")
     print(f"total_tasks={findings['overall']['total_tasks']} hack_rate={findings['overall']['hack_rate']}")

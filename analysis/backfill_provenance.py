@@ -6,7 +6,7 @@ git_commit, git_dirty and returned_model were recorded. This script copies every
 into results/runs/<model>/backfilled_v7/run_NN/ and adds those fields there. The originals
 are not modified.
 
-Sources for each backfilled field are explained in results/runs/<model>/BACKFILL_NOTE.md.
+Sources for each backfilled field are explained in docs/BACKFILL_NOTE.md.
 
   run_index          the folder name run_NN
   git_commit         the commit HEAD pointed to during the run, found by checking git history
@@ -96,7 +96,7 @@ def main(argv=None) -> None:
         dest.mkdir(parents=True, exist_ok=True)
         for name, rec in episodes:
             out = backfill_record(rec, i, commit)
-            (dest / name).write_text(json.dumps(out, indent=2), encoding="utf-8")
+            (dest / name).write_text(json.dumps(out, indent=2), encoding="utf-8", newline="\n")
 
     print(f"wrote {dest_root}")
 

@@ -372,7 +372,7 @@ def save_trajectory(result: dict, output_dir: str):
         result_copy = result.copy()
         result_copy.pop("_hacking_events", None)
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8", newline="\n") as f:
             json.dump(result_copy, f, indent=2)
         logger.info("Saved trajectory: %s", output_path)
     except Exception as e:
@@ -455,7 +455,7 @@ def save_run_summary(results: list[dict], output_dir: str, total_tasks: int, fai
     }
 
     try:
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8", newline="\n") as f:
             json.dump(summary, f, indent=2)
         logger.info("Saved run summary: %s", output_path)
     except Exception as e:
@@ -673,7 +673,7 @@ def main():
             "resume": "re-run the same command with --resume and the same --output-dir",
         }
         Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-        run_state_path.write_text(json.dumps(state, indent=2), encoding="utf-8")
+        run_state_path.write_text(json.dumps(state, indent=2), encoding="utf-8", newline="\n")
         print(f"Run state saved to {run_state_path}. Re-run with --resume to continue.")
         sys.exit(3)
     if run_state_path.exists():

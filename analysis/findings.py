@@ -352,7 +352,7 @@ class FindingsExtractor:
         """Save computed findings to JSON file. The path is required; see check_output_path."""
         out = check_output_path(path)
         findings = self.compute_findings()
-        with open(out, "w") as f:
+        with open(out, "w", encoding="utf-8", newline="\n") as f:
             json.dump(findings, f, indent=2)
         print(f"Findings saved to {path}")
 
