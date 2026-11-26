@@ -1,0 +1,226 @@
+[
+ {
+  "run": "run_01",
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_01",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_01",
+  "task": "task_008",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_01",
+  "task": "task_009",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_02",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_02",
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_03",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_03",
+  "task": "task_008",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_03",
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_04",
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_04",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_04",
+  "task": "task_009",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_04",
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_05",
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_05",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_05",
+  "task": "task_008",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_05",
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_06",
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_06",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_06",
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_07",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_08",
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_08",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_08",
+  "task": "task_008",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_08",
+  "task": "task_009",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_09",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_09",
+  "task": "task_004",
+  "level": "low",
+  "manual": "ii",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_09",
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_10",
+  "task": "task_002",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_10",
+  "task": "task_003",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ },
+ {
+  "run": "run_10",
+  "task": "task_009",
+  "level": "low",
+  "manual": "iii",
+  "rule": "confirm_explicit_irreversible"
+ },
+ {
+  "run": "run_10",
+  "task": "task_010",
+  "level": "low",
+  "manual": "i",
+  "rule": "unneeded_clarification"
+ }
+]

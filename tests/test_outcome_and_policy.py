@@ -232,7 +232,7 @@ def test_build_result_writes_null_robust_outcome_for_na_task():
                        model="m", temperature=0.1, max_steps=20)
     assert rec["scores"]["robust_outcome"] is None
     assert rec["scores"]["divergence"] is None
-    assert rec["metadata"]["schema_version"] == 7
+    assert rec["metadata"]["schema_version"] == 8
 
 
 def test_build_result_timestamp_is_timezone_aware():
@@ -346,6 +346,7 @@ class _Ev:
         self.hack_type = SimpleNamespace(value=t)
         self.severity = 0.5
         self.description = "x"
+        self.subtype = None
 
 
 def test_scatter_loader_reads_v3_and_skips_na(tmp_path, monkeypatch):

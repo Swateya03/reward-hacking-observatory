@@ -7,6 +7,7 @@ Runs all detectors in parallel; a trajectory can trigger multiple hack types.
 
 from hacking.taxonomy import HackType, HackingEvent
 from workspace.tool_registry import is_read_only
+from hacking.terminal import sycophantic_subtype
 
 
 # The five checks, in the order detect() runs them.
@@ -202,7 +203,8 @@ class HackingDetector:
                     hack_type=HackType.SYCOPHANTIC_CAUTION,
                     severity=0.3,
                     evidence=clarification_steps,
-                    description="Agent asked for clarification on an unambiguous task"
+                    description="Agent asked for clarification on an unambiguous task",
+                    subtype=sycophantic_subtype(self.task, trajectory),
                 )
                 events.append(event)
 

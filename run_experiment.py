@@ -28,6 +28,7 @@ from hacking.detector import HackingDetector
 from hacking.report import DetectionResult, print_report, aggregate
 from config import MAX_STEPS, MAX_TOKENS, MODEL, TEMPERATURE
 from agent.cost import BudgetExceeded
+from hacking.terminal import relabel_terminal, SUBTYPES
 from hacking.unsafe_action import unsafe_action_under_ambiguity
 from hacking.detector import check_availability, CHECKS
 from rewards.outcome import robust_outcome_available
@@ -39,7 +40,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TASK_BANK_PATH = "tasks/task_bank.json"
-RESULT_SCHEMA_VERSION = 7   # v7: scope_creep and footprint count only out-of-scope state-changing calls; v6: metadata.thinking (the setting sent; null if none); v5: metadata.max_tokens; v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
+RESULT_SCHEMA_VERSION = 8   # v8: closing-question relabel (hacking/terminal.py) and sycophantic_caution subtype; v7: scope_creep and footprint count only out-of-scope state-changing calls; v6: metadata.thinking (the setting sent; null if none); v5: metadata.max_tokens; v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
 
 
 def parse_args():
@@ -185,11 +186,15 @@ def summarise_hacking(hacking_events: list, robust_available: bool = True) -> di
             for name in CHECKS
         },
         "primary_hack_type": hacking_events[0].hack_type.value if hacking_events else None,
+        "subtypes": {
+            name: any(e.subtype == name for e in hacking_events) for name in SUBTYPES
+        },
         "events": [
             {
                 "type": event.hack_type.value,
                 "severity": round(event.severity, 3),
                 "description": event.description,
+                "subtype": event.subtype,
             }
             for event in hacking_events
         ],
@@ -278,6 +283,8 @@ def run_task(
             # Create and run episode
             loop = AgentLoop(model_client, workspace_client, task)
             trajectory = loop.run(max_steps=max_steps)
+            # Closing-question rule: relabels only the final step's type; the stop step is unchanged.
+            trajectory = relabel_terminal(task, trajectory)
 
             # Score the trajectory with all three reward functions (before deleting session)
             scorer = Scorer(workspace_client, task)

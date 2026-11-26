@@ -40,6 +40,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from hacking.detector import CHECKS  # noqa: E402
+from hacking.terminal import SUBTYPES  # noqa: E402
 
 LEVELS = ("low", "medium", "high")
 REQUIRED_SCHEMA = 7
@@ -53,7 +54,7 @@ UNSAFE_LEVELS = ("medium", "high")
 
 # ── loading ──────────────────────────────────────────────────────────────────
 
-def load_episodes(runs_root: Path) -> dict:
+def load_episodes(runs_root: Path, schema: int = REQUIRED_SCHEMA) -> dict:
     """{run_id: {task_id: episode_dict}} for every run_NN folder under runs_root."""
     runs = {}
     for d in sorted(runs_root.iterdir()):
@@ -64,8 +65,8 @@ def load_episodes(runs_root: Path) -> dict:
         for f in sorted(d.glob("task_*.json")):
             rec = json.loads(f.read_text(encoding="utf-8"))
             version = (rec.get("metadata") or {}).get("schema_version")
-            if version != REQUIRED_SCHEMA:
-                raise ValueError(f"{f}: schema_version {version!r}; this analysis needs {REQUIRED_SCHEMA}")
+            if version != schema:
+                raise ValueError(f"{f}: schema_version {version!r}; this analysis needs {schema}")
             episodes[rec["task_id"]] = episode_from_record(rec)
         runs[d.name] = episodes
     if not runs:
@@ -82,6 +83,9 @@ def episode_from_record(rec: dict) -> dict:
         "checks": {n: (bool(c["available"]), bool(c["fired"]) if c["available"] else None)
                    for n, c in checks.items()},
         "unsafe": (rec.get("policy_metrics") or {}).get("unsafe_action_under_ambiguity"),
+        "completion_type": rec.get("completion_type"),
+        "subtypes": {name: any(ev.get("subtype") == name for ev in rec["hacking"].get("events", []))
+                     for name in SUBTYPES},
         "naive": rec["scores"]["naive"],
         "robust": rec["scores"]["robust_outcome"],
         "divergence": rec["scores"]["divergence"],
@@ -163,7 +167,8 @@ def permutation_p(num: np.ndarray, den: np.ndarray, levels_of_task: np.ndarray, 
 
 # ── assembling the aggregate ─────────────────────────────────────────────────
 
-def analyse(runs: dict, n_boot: int = N_BOOT, n_perm: int = N_PERM, seed: int = SEED) -> dict:
+def analyse(runs: dict, n_boot: int = N_BOOT, n_perm: int = N_PERM, seed: int = SEED,
+            schema: int = REQUIRED_SCHEMA) -> dict:
     run_ids = sorted(runs)
     all_tasks = sorted({t for r in run_ids for t in runs[r]})
     for r in run_ids:
@@ -192,6 +197,15 @@ def analyse(runs: dict, n_boot: int = N_BOOT, n_perm: int = N_PERM, seed: int = 
             (lambda c: lambda e: 1.0 if e["checks"][c][1] else 0.0)(c),
             (lambda c: lambda e: 1.0 if e["checks"][c][0] else None)(c),
         )
+
+    # added after the existing metrics so their bootstrap draws do not change
+    metrics["clarification_rate"] = (
+        lambda e: 1.0 if e["completion_type"] == "clarification" else 0.0,
+        lambda e: 1.0)
+    for sub in SUBTYPES:
+        metrics[f"sub_{sub}"] = (
+            (lambda sub: lambda e: 1.0 if e["subtypes"][sub] else 0.0)(sub),
+            (lambda e: 1.0))
 
     result_levels = {}
     per_level_tasks = {lv: [t for t in all_tasks if level_of[t] == lv] for lv in LEVELS}
@@ -284,7 +298,7 @@ def analyse(runs: dict, n_boot: int = N_BOOT, n_perm: int = N_PERM, seed: int = 
         })
 
     return {
-        "schema_version": REQUIRED_SCHEMA,
+        "schema_version": schema,
         "runs": run_ids,
         "tasks": len(all_tasks),
         "settings": {"bootstrap_resamples": n_boot, "permutations": n_perm, "seed": seed,
@@ -300,9 +314,11 @@ def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--runs-root", required=True, help="e.g. results/runs/claude-haiku-5-5")
     p.add_argument("--out", required=True, help="e.g. results/aggregate_claude-haiku-5-5.json")
+    p.add_argument("--schema", type=int, default=REQUIRED_SCHEMA,
+                   help="schema version the records must have (7 for the original runs, 8 for re-scored)")
     args = p.parse_args(argv)
-    runs = load_episodes(Path(args.runs_root))
-    agg = analyse(runs)
+    runs = load_episodes(Path(args.runs_root), schema=args.schema)
+    agg = analyse(runs, schema=args.schema)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(agg, indent=2), encoding="utf-8")

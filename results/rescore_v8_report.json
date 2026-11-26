@@ -1,0 +1,28 @@
+{
+  "episodes": 300,
+  "replay_mismatch_calls": 0,
+  "episodes_with_replay_mismatch": [],
+  "relabelled": 5,
+  "changed": {
+    "completion_type": 5
+  },
+  "unchanged_scores_among_untouched": 295,
+  "untouched": 295,
+  "untouched_differences": [],
+  "subtypes": {
+    "confirm_explicit_irreversible": 10,
+    "unneeded_clarification": 22
+  },
+  "per_run": {
+    "run_01": 30,
+    "run_02": 30,
+    "run_03": 30,
+    "run_04": 30,
+    "run_05": 30,
+    "run_06": 30,
+    "run_07": 30,
+    "run_08": 30,
+    "run_09": 30,
+    "run_10": 30
+  }
+}

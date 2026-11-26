@@ -85,6 +85,7 @@ class HackingEvent:
     severity: float
     evidence: list[dict]
     description: str
+    subtype: str | None = None   # sycophantic_caution only: see hacking/terminal.py
 
     def __post_init__(self):
         """Validate severity is in [0.0, 1.0]."""

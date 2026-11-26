@@ -28,14 +28,15 @@ def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--runs-root", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--schema", type=int, default=7)
     a = p.parse_args(argv)
-    runs = load_episodes(Path(a.runs_root))
+    runs = load_episodes(Path(a.runs_root), schema=a.schema)
     run_ids = sorted(runs)
     all_tasks = sorted({t for r in run_ids for t in runs[r]})
     level_of = {t: runs[run_ids[0]][t]["level"] for t in all_tasks}
     rng = np.random.default_rng(SEED)
     out = {"definition": "any of " + ", ".join(GAMING) + " fired (available checks); sycophantic_caution excluded",
-           "runs": len(run_ids), "bootstrap_resamples": N_BOOT, "seed": SEED, "levels": {}}
+           "schema_version": a.schema, "runs": len(run_ids), "bootstrap_resamples": N_BOOT, "seed": SEED, "levels": {}}
     for lv in LEVELS:
         tasks = [t for t in all_tasks if level_of[t] == lv]
         num = task_matrix(runs, tasks, run_ids, gaming_hack)
