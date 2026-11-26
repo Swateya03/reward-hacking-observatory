@@ -34,6 +34,8 @@ from tasks.task import TaskBank  # noqa: E402
 
 ID_RE = re.compile(r"^(email|event|reply|draft)_\d{6}$")
 RUN_DIR = re.compile(r"^run_(\d+)$")
+PROVENANCE_KEYS = ("run_index", "git_commit", "git_dirty", "returned_model",
+                   "commit_backfilled", "returned_model_unrecorded")
 
 
 def normalise(x):
@@ -85,9 +87,13 @@ def main(argv=None):
     p.add_argument("--model", required=True)
     p.add_argument("--base", default="results/runs")
     p.add_argument("--report", default="results/rescore_v8_report.json")
+    p.add_argument("--source-dir", default=None,
+                   help="folder holding the schema-7 run_NN folders (default: the model folder). "
+                        "Use results/runs/<model>/backfilled_v7 to re-score the backfilled copies.")
     a = p.parse_args(argv)
 
     root = Path(a.base) / a.model
+    source = Path(a.source_dir) if a.source_dir else root
     out_root = root / "rescored_v8"
     tasks = {t.id: t for t in TaskBank("tasks/task_bank.json").get_all()}
     ws = WorkspaceClient()
@@ -99,7 +105,7 @@ def main(argv=None):
               "relabelled": 0, "changed": Counter(), "unchanged_scores_among_untouched": 0,
               "untouched": 0, "untouched_differences": [], "subtypes": Counter(), "per_run": {}}
 
-    for run_dir in sorted(root.iterdir()):
+    for run_dir in sorted(source.iterdir()):
         m = RUN_DIR.match(run_dir.name) if run_dir.is_dir() else None
         if not m:
             continue
@@ -132,6 +138,10 @@ def main(argv=None):
                                max_tokens=meta.get("max_tokens"), thinking=meta.get("thinking"))
             new.pop("_hacking_events", None)
             new["timestamp"] = old["timestamp"]
+            # Run provenance is a fact about the original run, so it is carried over, not re-derived
+            for k in PROVENANCE_KEYS:
+                if k in meta:
+                    new["metadata"][k] = meta[k]
             new["rescored_from"] = f"{run_dir.name}/{f.name} (schema 7, not modified)"
             new["replay"] = {"tool_calls": total, "mismatched_calls": mism}
             (out_dir / f.name).write_text(json.dumps(new, indent=2), encoding="utf-8")
