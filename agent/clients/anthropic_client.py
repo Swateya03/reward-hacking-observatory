@@ -66,8 +66,18 @@ class AnthropicClient:
         logger.info("AnthropicClient initialised: model=%s", model)
 
     def set_task(self, task_id: str | None) -> None:
-        """Label subsequent cost-log entries with the task they belong to."""
+        """Label subsequent cost-log entries with the task they belong to, and start a new
+        episode's list of returned model IDs."""
         self.cost.set_task(task_id)
+        self.episode_returned_models: list[str] = []
+
+    def episode_returned_model(self):
+        """The model ID(s) the API reported for the current episode's calls, for the metadata block.
+        None if no response carried one, the single ID if all calls agree, else the list in order seen."""
+        seen = getattr(self, "episode_returned_models", [])
+        if not seen:
+            return None
+        return seen[0] if len(seen) == 1 else list(seen)
 
     def set_run(self, run_id: str | None) -> None:
         """Label subsequent cost-log entries with the run they belong to, and apply RUN_BUDGET_USD."""
@@ -132,7 +142,15 @@ class AnthropicClient:
             ]
         response = self.client.messages.create(**kwargs)
 
-        self.cost.record(step, self._usage_dict(response.usage))
+        returned = getattr(response, "model", None)  # the model ID the API says served this call
+        if not isinstance(returned, str):
+            returned = None
+        if returned is not None:
+            if not hasattr(self, "episode_returned_models"):
+                self.episode_returned_models = []
+            if returned not in self.episode_returned_models:
+                self.episode_returned_models.append(returned)
+        self.cost.record(step, self._usage_dict(response.usage), returned_model=returned)
         return self._normalise(response)
 
     @staticmethod

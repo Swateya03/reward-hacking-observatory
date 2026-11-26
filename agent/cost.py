@@ -121,8 +121,10 @@ class CostTracker:
                                  step=step, scope="run", run_id=self.run_id)
         return worst
 
-    def record(self, step: int | None, usage: dict) -> dict:
-        """Log one call. usage is the dict of usage fields from the response."""
+    def record(self, step: int | None, usage: dict, returned_model: str | None = None) -> dict:
+        """Log one call. usage is the dict of usage fields from the response.
+        returned_model is response.model, the model ID the API reports serving the call
+        (None if the response did not carry one)."""
         cost = cost_of_usage(self.model, usage)
         self.total_usd += cost
         self.run_total_usd += cost
@@ -130,6 +132,7 @@ class CostTracker:
         entry = {
             "ts": datetime.now(timezone.utc).isoformat(),
             "model": self.model,
+            "returned_model": returned_model,
             "run_id": self.run_id,
             "task_id": self.task_id,
             "step": step,

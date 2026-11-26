@@ -44,6 +44,10 @@ def test_metadata_block_records_the_settings_passed_in():
         "max_steps": 7,
         "max_tokens": 2048,
         "thinking": None,
+        "run_index": None,
+        "git_commit": None,
+        "git_dirty": None,
+        "returned_model": None,
     }
     # The top-level model field is the same value as metadata.model.
     assert rec["model"] == rec["metadata"]["model"]

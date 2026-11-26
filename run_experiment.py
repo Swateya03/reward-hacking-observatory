@@ -28,6 +28,7 @@ from hacking.detector import HackingDetector
 from hacking.report import DetectionResult, print_report, aggregate
 from config import MAX_STEPS, MAX_TOKENS, MODEL, TEMPERATURE
 from agent.cost import BudgetExceeded
+from agent.provenance import git_provenance
 from hacking.terminal import relabel_terminal, SUBTYPES
 from hacking.unsafe_action import unsafe_action_under_ambiguity
 from hacking.detector import check_availability, CHECKS
@@ -40,7 +41,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 TASK_BANK_PATH = "tasks/task_bank.json"
-RESULT_SCHEMA_VERSION = 8   # v8: closing-question relabel (hacking/terminal.py) and sycophantic_caution subtype; v7: scope_creep and footprint count only out-of-scope state-changing calls; v6: metadata.thinking (the setting sent; null if none); v5: metadata.max_tokens; v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
+RESULT_SCHEMA_VERSION = 8   # v8 (metadata also gained run_index, git_commit, git_dirty, returned_model; additive, schema number unchanged): closing-question relabel (hacking/terminal.py) and sycophantic_caution subtype; v7: scope_creep and footprint count only out-of-scope state-changing calls; v6: metadata.thinking (the setting sent; null if none); v5: metadata.max_tokens; v4: hacking.checks (per-check available/fired); v3: robust_outcome null when N/A; policy_metrics
 
 
 def parse_args():
@@ -212,11 +213,17 @@ def build_result(
     max_steps: int,
     max_tokens: int = MAX_TOKENS,
     thinking: dict | None = None,
+    run_index: int | None = None,
+    git_commit: str | None = None,
+    git_dirty: bool | None = None,
+    returned_model=None,
 ) -> dict:
     """Build the JSON record written to results/<task_id>.json.
 
     This is the only writer of per-task results. findings.py reads this shape.
-    The metadata block records the settings the episode was run with.
+    The metadata block records the settings the episode was run with, and where it came from:
+    run_index (k of run_0k), git_commit and git_dirty (code provenance), and returned_model
+    (response.model from the API; a string, a list if the calls disagreed, or null).
     """
     completion_type = trajectory[-1]["type"] if trajectory else None
     # The loop only stops early on completion or clarification; anything else ran out of steps.
@@ -243,6 +250,10 @@ def build_result(
             "max_steps": max_steps,
             "max_tokens": max_tokens,
             "thinking": thinking,
+            "run_index": run_index,
+            "git_commit": git_commit,
+            "git_dirty": git_dirty,
+            "returned_model": returned_model,
         },
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -254,7 +265,9 @@ def run_task(
     workspace_client: WorkspaceClient,
     max_steps: int,
     max_retries: int = 3,
-    retry_delay: int = 5
+    retry_delay: int = 5,
+    run_index: int | None = None,
+    provenance: dict | None = None,
 ) -> dict | None:
     """
     Run a single task with retry logic. Returns results or None if failed after retries.
@@ -304,6 +317,7 @@ def run_task(
             # Clean up workspace session after detection
             workspace_client.delete_session(loop.session_id)
 
+            provenance = provenance or {}
             result = build_result(
                 task, trajectory, scores, hacking_events,
                 model=model_client.model,
@@ -311,6 +325,10 @@ def run_task(
                 max_steps=max_steps,
                 max_tokens=model_client.max_tokens,
                 thinking=model_client.thinking,
+                run_index=run_index,
+                git_commit=provenance.get("git_commit"),
+                git_dirty=provenance.get("git_dirty"),
+                returned_model=model_client.episode_returned_model(),
             )
 
             # Store hacking events for reporting
@@ -522,6 +540,9 @@ def main():
             print(f"  {task.id:12} | {task.ambiguity_level:6} | {task.prompt[:50]}")
         return
 
+    # Code provenance is read once, before this run writes anything, so every episode in the run agrees
+    provenance = git_provenance(".")
+
     # A numbered run gets its own directory, unless the output directory was set explicitly
     run_id = None
     if args.run_index is not None:
@@ -550,6 +571,9 @@ def main():
         "model": model_client.model,
         "temperature": model_client.temperature,
         "max_steps": args.max_steps,
+        "run_index": args.run_index,
+        "git_commit": provenance["git_commit"],
+        "git_dirty": provenance["git_dirty"],
     }
 
     # Verify workspace server is running
@@ -573,7 +597,8 @@ def main():
     budget_stop = None
     for idx, task in enumerate(tasks, 1):
         try:
-            result = run_task(task, model_client, workspace_client, args.max_steps)
+            result = run_task(task, model_client, workspace_client, args.max_steps,
+                              run_index=args.run_index, provenance=provenance)
         except BudgetExceeded as e:
             budget_stop = e
             print(f"\nBUDGET GUARD ({e.scope} cap): stopped before {e.task_id or task.id}, step {e.step}. "
