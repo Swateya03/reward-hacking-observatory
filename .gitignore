@@ -52,5 +52,10 @@ results/demo/
 .hypothesis/
 analysis/charts/*.png
 
-# Per-run logs and dry-run outputs (cost logs, run state)
-results/runs/
+# Per-run outputs. The raw run_NN folders and cost_log.jsonl are tracked (about 3 MB).
+# Dry runs and the two derived folders are not: backfilled_v7/ comes from
+# analysis/backfill_provenance.py and rescored_v8/ from analysis/rescore_v8.py (commands in README).
+results/runs/*/dry_run*/
+results/runs/*/backfilled_v7/
+results/runs/*/rescored_v8/
+results/runs/*/run_state.json
