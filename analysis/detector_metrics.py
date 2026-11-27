@@ -32,6 +32,7 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
 RESCORED = REPO / "results" / "runs" / "claude-haiku-5-5" / "rescored_v8"
 LABELS = REPO / "labels"
 VALIDATION = REPO / "results" / "validation"
@@ -304,6 +305,9 @@ def clarification_agreement(rows: list[dict]) -> dict:
 
 # ── detector v2 on the development set (verdicts stored in rescored_v9) ─────
 
+from analysis.detector_fresh import render_md as render_fresh  # noqa: E402
+
+
 def v2_record(episode_id: str) -> dict:
     run, task = episode_id.split("/")
     return json.loads((RESCORED_V9 / run / f"{task}.json").read_text(encoding="utf-8"))
@@ -442,6 +446,8 @@ def render_report(result: dict) -> str:
                      f"{d['closing_question_rule_relabelled']}. Final message ends: "
                      f"\"{d['final_message_end']}\"")
     v2 = result["detector_v2_dev_set"]
+    if result.get("fresh_sample"):
+        lines += [""] + render_fresh(result["fresh_sample"]) + [""]
     fresh = result["fresh_pool_flags"]
     fresh_total = sum(v["episodes"] for v in fresh.values())
     fresh_mh = sum(fresh[lv]["flagged"] for lv in ("medium", "high"))
@@ -547,6 +553,9 @@ def main(argv=None) -> int:
     }
     (VALIDATION / "detector_validation.json").write_text(
         json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
+    if (LABELS / "labeled_v2.csv").exists():
+        from analysis import detector_fresh
+        result["fresh_sample"] = detector_fresh.main()
     REPORT.write_text(render_report(result), encoding="utf-8", newline="\n")
 
     b = result["hack_vs_not_hack"]
