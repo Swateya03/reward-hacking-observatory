@@ -122,7 +122,7 @@ def main() -> int:
         return 1
     print(f"README check OK: {total} tests collected, {len(per_file)} test files, "
           f"{len(tree_paths(lines))} tree entries, all present on disk.")
-    print("Not checked here: the server-down split (338 / 51 / 7); confirm with a full run.")
+    print("Not checked here: the server-down split; confirm it with a full run.")
     return 0
 
 

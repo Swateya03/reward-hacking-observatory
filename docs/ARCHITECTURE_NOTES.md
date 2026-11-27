@@ -13,8 +13,8 @@ Reconciled on 2026-11-27 against the current code (`RESULT_SCHEMA_VERSION = 8`, 
 - **Aggregates** come from `analysis/aggregate_runs.py` and `analysis/gaming_only_rate.py` (section 4).
 - **Reproducibility (*verified*).** `aggregate_claude-haiku-5-5_v8.json` and `gaming_only_claude-haiku-5-5_v8.json` regenerate exactly from `rescored_v8/` with `--schema 8`. The committed v7 aggregate does not. It predates the current code: it has no `clarification_rate`, `sub_*`, `exploratory` or `settings.random_streams` keys. Its 30 shared point estimates match; its intervals and permutation p-values differ.
 - **Tests (run today, *verified*).**
-  - Server up (`uvicorn workspace.main:app --port 8000`): **398 passed, 0 failed, 0 skipped** (32 s).
-  - Server down: **340 passed, 51 failed, 7 skipped** (241 s). All 51 failures are in `tests/test_workspace.py`. The failure lines I read are `httpx` exceptions (the list was truncated, so I did not check every message). All 7 skips are in `tests/test_archive_email.py`.
+  - Server up (`uvicorn workspace.main:app --port 8000`): **417 passed, 0 failed, 0 skipped** (37 s).
+  - Server down: **359 passed, 51 failed, 7 skipped** (247 s). All 51 failures are in `tests/test_workspace.py`. The failure lines I read are `httpx` exceptions (the list was truncated, so I did not check every message). All 7 skips are in `tests/test_archive_email.py`.
   - No test calls the live API. Every test that builds an Anthropic client patches `anthropic.Anthropic`.
 - **Cost.** 1,080 API calls in `results/runs/claude-haiku-5-5/cost_log.jsonl`, about $0.22 in total (*verified*). Caps: $6.50 overall (`BUDGET_USD` in `config.py`) and $2.00 per run (`RUN_BUDGET_USD` in `config.py`).
 
@@ -205,10 +205,11 @@ Chart text is built from the data by `build_*` functions. `tests/test_chart_text
 | `test_cost.py` | 20 | no | Mocked SDK; budget guard |
 | `test_scope_rule.py` | 10 | no | Scope rule |
 | `test_terminal_rule.py` | 13 | no | Closing-question relabel |
+| `test_label_helper.py` | 19 | no | `scripts/label.py` on a fake sheet; never touches `labels/` |
 | `test_notes_schema.py` | 2 | no | This file's schema statements match `RESULT_SCHEMA_VERSION` |
-| **Total** | **398** | | |
+| **Total** | **417** | | |
 
-Full runs today: server up, 398 passed, 0 failed, 0 skipped (32 s). Server down, 340 passed, 51 failed, 7 skipped (the two new schema tests need no server; see below).
+Full runs today: server up, 417 passed, 0 failed, 0 skipped (37 s). Server down, 359 passed, 51 failed, 7 skipped (247 s). The new label-helper tests need no server.
 
 How deeply I read the tests: I read each file's docstring, counted its collected tests, and searched all files for live-API or server use. I did not read every test body line by line.
 
@@ -225,7 +226,7 @@ Status key: ✔ matches the code or data; ✗ wrong or stale; illustrative = lab
 | Badges | 5 hack types | `hacking/taxonomy.py` `HackType` | ✔ |
 | Badges | 3 reward functions | `rewards/naive.py`, `intermediate.py`, `robust.py` | ✔ |
 | Badges | "Results pending" | Data exists (section 0) | ✗ stale |
-| Badges | 398 tests passing | `pytest tests/`, server up | ✔ (updated; checked by `scripts/check_docs.py`) |
+| Badges | 417 tests passing | `pytest tests/`, server up | ✔ (updated; checked by `scripts/check_docs.py`) |
 | §01, §07 | "Results pending" | As above | ✗ stale |
 | §02 | Port 8000 | `uvicorn` command; `WORKSPACE_BASE_URL` in `agent/workspace_client.py` | ✔ |
 | §03 | 12 files in 5 folders | `workspace/fixtures/default.json` (/tmp, /projects/alpha, /projects/q4, /hr, /hr/confidential) | ✔ |
@@ -257,7 +258,7 @@ Status key: ✔ matches the code or data; ✗ wrong or stale; illustrative = lab
 | §08 | Step limit 20 | `MAX_STEPS` in `config.py` | ✔ |
 | §08 | Per-file test counts | `pytest --collect-only` (sum 396) | ✔ |
 | §08 | Project tree | Filesystem | ✔ (rebuilt from disk; every path checked by `scripts/check_docs.py`) |
-| §09 | 398 pass; 340 / 51 / 7 without server | Today's runs | ✔ |
+| §09 | 417 pass; 359 / 51 / 7 without server | Today's runs | ✔ |
 | §10 | 300 episodes, 17:41 to 18:08 UTC, 25 Nov 2026 | Timestamps in all 300 files | ✔ |
 | §10 | Returned model not recorded for runs 1 to 10 | `returned_model` is `null` in all 1,080 cost-log entries and in the backfilled copies | ✔ |
 | §11 | 2 CPU / 2 GB per pod; 70% utilisation; 90%+ fixture I/O cut; 5-10% of tasks annotated | None | design |
