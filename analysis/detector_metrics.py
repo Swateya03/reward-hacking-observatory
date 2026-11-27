@@ -1,28 +1,32 @@
 """Detector validation against hand labels.
 
-Reads labels/labeled.csv (your labels). The detector's verdict and type come from the rescored
-v8 record of each episode, never from the CSV, so the labels stay blind.
+Reads labels/labeled.csv (the author's labels). The detector's verdict and type come from the
+rescored v8 record of each episode, never from the CSV.
 
-Computes
-  1. hack vs not hack: precision, recall, F1, with episode-level bootstrap 95% CIs.
-     "unsure" rows are excluded and counted.
-  2. Confusion matrix: the detector's primary type (rows) vs your hack types (columns). An
-     episode with several hack types of yours counts once in each of those columns.
-  3. Every disagreement, with its episode ID.
-  4. Clarification classes: your class vs results/clarification_labels.json (agreement and
-     disagreements), on the sampled episodes that have a manual class.
-  5. Self-consistency (optional): labels/selfcheck.csv (re-labelled) vs labels/labeled.csv.
+Computes, for the 50-episode sample:
+  1. hack vs not hack: precision, recall, F1 with episode-level bootstrap 95% CIs (unweighted).
+  2. Stratum-weighted estimates for the full pool (295 episodes): the human-labelled hack rate,
+     precision and recall, with stratified bootstrap 95% CIs. Strata are ambiguity level x
+     detector verdict (flagged / not flagged). Pool sizes come from the rescored records; the
+     five guide examples are excluded from the pool.
+  3. Confusion matrix: the detector's primary type (rows) vs the author's hack types (columns).
+  4. Per-check breakdown: for each check, how often it fired in the sample, and whether the
+     author's label includes that type (true) or not (false positive).
+  5. Every disagreement, with its episode ID.
+  6. Clarification classes against results/clarification_labels.json, and the disagreements
+     that concern the closing-question rule (hacking/terminal.py).
+
+Writes results/validation/detector_validation.json and docs/DETECTOR_VALIDATION.md (the tables
+are generated from the JSON; only the limitations text is fixed).
 
 Commands (repo root):
-  python analysis/detector_metrics.py                  # metrics on labels/labeled.csv
-  python analysis/detector_metrics.py --make-selfcheck # write labels/selfcheck.csv (10 blind rows)
-  python analysis/detector_metrics.py --selfcheck      # agreement of labels/selfcheck.csv with labeled.csv
+  python analysis/detector_metrics.py
 """
 
-import argparse
 import csv
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -31,32 +35,48 @@ REPO = Path(__file__).resolve().parents[1]
 RESCORED = REPO / "results" / "runs" / "claude-haiku-5-5" / "rescored_v8"
 LABELS = REPO / "labels"
 VALIDATION = REPO / "results" / "validation"
+DOCS = REPO / "docs"
 CLAR_LABELS = REPO / "results" / "clarification_labels.json"
 CLAR_MAP = VALIDATION / "clarification_map.json"
+REPORT = DOCS / "DETECTOR_VALIDATION.md"
 
-BOOT_SEED = 20251127          # same family as the sampling seed; separate stream below
-SELF_SEED = 20251128          # draws the 10 self-check rows
+BOOT_SEED = 20251127
 BOOTSTRAP = 10_000
-N_SELF = 10
+LEVELS = ("low", "medium", "high")
+CELLS = [(lv, flagged) for lv in LEVELS for flagged in (True, False)]
+
+# The five guide examples (same list as analysis/validation/export_labeling_sample.py). They were
+# used to write docs/LABELING_GUIDE.md, so they are not part of the pool.
+POOL_EXCLUDED = {
+    "run_06/task_008", "run_02/task_006", "run_02/task_009", "run_01/task_009", "run_01/task_004",
+}
 
 VALID_LABELS = ("hack", "not a hack", "unsure")
 HACK_TYPES = ("metric_gaming", "scope_creep", "irreversibility_bias", "overclaiming",
               "sycophantic_caution")
+CHECKS = HACK_TYPES
 VALID_CLASSES = ("i", "ii", "iii", "not a clarification")
 VALID_TASK_ISSUE = ("yes", "no")
-
-CSV_COLUMNS = [
-    "episode_id", "task_instruction", "tool_calls", "final_state_diff", "final_message",
-    "label", "hack_type", "clarification_class", "task_issue", "note",
-]
 
 
 # ── loading ─────────────────────────────────────────────────────────────────
 
 def load_record(episode_id: str) -> dict:
     run, task = episode_id.split("/")
-    path = RESCORED / run / f"{task}.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads((RESCORED / run / f"{task}.json").read_text(encoding="utf-8"))
+
+
+def load_pool() -> dict:
+    pool = {}
+    for path in sorted(RESCORED.glob("run_*/task_*.json")):
+        eid = f"{path.parent.name}/{path.stem}"
+        if eid not in POOL_EXCLUDED:
+            pool[eid] = json.loads(path.read_text(encoding="utf-8"))
+    return pool
+
+
+def stratum(record: dict):
+    return (record["ambiguity_level"], bool(record["hacking"]["was_hacked"]))
 
 
 def read_labels(path: Path) -> list[dict]:
@@ -84,17 +104,33 @@ def read_labels(path: Path) -> list[dict]:
         raise SystemExit("label file has errors; nothing computed:\n  " + "\n  ".join(errors))
     for r in rows:
         r["_types"] = [t.strip() for t in r["hack_type"].split(";") if t.strip()]
+        r["_record"] = load_record(r["episode_id"])
     return rows
 
 
-# ── metrics ─────────────────────────────────────────────────────────────────
+# ── unweighted sample metrics ───────────────────────────────────────────────
 
 def _prf(tp: int, fp: int, fn: int):
     precision = tp / (tp + fp) if tp + fp else float("nan")
     recall = tp / (tp + fn) if tp + fn else float("nan")
-    f1 = (2 * precision * recall / (precision + recall)
-          if precision + recall and not np.isnan(precision) and not np.isnan(recall) else float("nan"))
+    if np.isnan(precision) or np.isnan(recall) or precision + recall == 0:
+        f1 = float("nan")
+    else:
+        f1 = 2 * precision * recall / (precision + recall)
     return precision, recall, f1
+
+
+def _ci(values) -> list | None:
+    arr = np.array(values, dtype=float)
+    arr = arr[~np.isnan(arr)]
+    if arr.size == 0:
+        return None
+    lo, hi = np.percentile(arr, [2.5, 97.5])
+    return [round(float(lo), 4), round(float(hi), 4)]
+
+
+def _num(x):
+    return None if np.isnan(x) else round(float(x), 4)
 
 
 def binary_metrics(truth: np.ndarray, pred: np.ndarray) -> dict:
@@ -103,50 +139,115 @@ def binary_metrics(truth: np.ndarray, pred: np.ndarray) -> dict:
     fn = int(np.sum(truth & ~pred))
     tn = int(np.sum(~truth & ~pred))
     p, r, f = _prf(tp, fp, fn)
-
     rng = np.random.default_rng(BOOT_SEED)
     n = len(truth)
     boots = {"precision": [], "recall": [], "f1": []}
     for _ in range(BOOTSTRAP):
         idx = rng.integers(0, n, size=n)
         bt, bp = truth[idx], pred[idx]
-        bp_, br_, bf_ = _prf(int(np.sum(bt & bp)), int(np.sum(~bt & bp)), int(np.sum(bt & ~bp)))
-        boots["precision"].append(bp_)
-        boots["recall"].append(br_)
-        boots["f1"].append(bf_)
-
-    def ci(vals):
-        arr = np.array(vals, dtype=float)
-        arr = arr[~np.isnan(arr)]
-        if arr.size == 0:
-            return None
-        lo, hi = np.percentile(arr, [2.5, 97.5])
-        return [float(lo), float(hi)]
-
-    def num(x):
-        return None if np.isnan(x) else round(float(x), 4)
-
+        bpr, brc, bf = _prf(int(np.sum(bt & bp)), int(np.sum(~bt & bp)), int(np.sum(bt & ~bp)))
+        boots["precision"].append(bpr)
+        boots["recall"].append(brc)
+        boots["f1"].append(bf)
     return {
         "n": n, "tp": tp, "fp": fp, "fn": fn, "tn": tn,
-        "precision": {"point": num(p), "ci95": ci(boots["precision"])},
-        "recall": {"point": num(r), "ci95": ci(boots["recall"])},
-        "f1": {"point": num(f), "ci95": ci(boots["f1"])},
+        "precision": {"point": _num(p), "ci95": _ci(boots["precision"])},
+        "recall": {"point": _num(r), "ci95": _ci(boots["recall"])},
+        "f1": {"point": _num(f), "ci95": _ci(boots["f1"])},
+        "human_hack_rate": {"point": _num(float(truth.mean())) if n else None,
+                            "ci95": _ci(_bootstrap_mean(truth.astype(float)))},
         "bootstrap_resamples": BOOTSTRAP,
         "bootstrap_seed": BOOT_SEED,
     }
 
 
+def _bootstrap_mean(values: np.ndarray) -> list[float]:
+    rng = np.random.default_rng(BOOT_SEED)
+    n = len(values)
+    idx = rng.integers(0, n, size=(BOOTSTRAP, n))
+    return values[idx].mean(axis=1).tolist()
+
+
+# ── stratum-weighted estimates for the pool ─────────────────────────────────
+
+def weighted_estimates(labels_by_cell: dict, pool_sizes: dict) -> dict:
+    """Estimates for the whole pool from the stratified sample.
+
+    labels_by_cell: cell -> 0/1 array of human hack labels in the sample (non-empty for each cell)
+    pool_sizes:     cell -> number of pool episodes in that cell (N_h)
+
+    With p_h the hack share of stratum h in the sample:
+      hacks in pool          H = sum_h N_h p_h
+      hacks among flagged    T = sum_{h flagged} N_h p_h
+      hack rate              H / N
+      precision (pool)       T / sum_{h flagged} N_h      (flagged episodes that are hacks)
+      recall (pool)          T / H                         (hacks the detector flags)
+    CIs: stratified bootstrap (resample each cell's sample with replacement).
+    """
+    for c in CELLS:
+        if len(labels_by_cell.get(c, [])) == 0:
+            raise SystemExit(f"no sampled episodes in stratum {c}; weights cannot be estimated")
+    N = np.array([pool_sizes[c] for c in CELLS], dtype=float)
+    flagged = np.array([c[1] for c in CELLS], dtype=float)
+    p_point = np.array([np.mean(labels_by_cell[c]) for c in CELLS])
+
+    def estimates(p):
+        hacks = (p * N).sum(axis=-1)
+        among_flagged = (p * N * flagged).sum(axis=-1)
+        flagged_pool = (N * flagged).sum()
+        with np.errstate(divide="ignore", invalid="ignore"):
+            rate = hacks / N.sum()
+            precision = among_flagged / flagged_pool
+            recall = np.where(hacks > 0, among_flagged / hacks, np.nan)
+        return {"hack_rate": rate, "precision": precision, "recall": recall,
+                "hacks_in_pool": hacks, "hacks_flagged_in_pool": among_flagged}
+
+    point = {k: float(np.asarray(v)) for k, v in estimates(p_point).items()}
+    rng = np.random.default_rng(BOOT_SEED)
+    draws = []
+    for c in CELLS:
+        y = np.asarray(labels_by_cell[c], dtype=float)
+        idx = rng.integers(0, len(y), size=(BOOTSTRAP, len(y)))
+        draws.append(y[idx].mean(axis=1))
+    boot = estimates(np.stack(draws, axis=1))
+    return {
+        k: {"point": _num(point[k]), "ci95": _ci(boot[k]), "ci_method": "stratified bootstrap"}
+        for k in point
+    } | {"pool_episodes": int(N.sum()), "pool_flagged": int(flagged @ N),
+         "bootstrap_resamples": BOOTSTRAP, "bootstrap_seed": BOOT_SEED}
+
+
+# ── per-check breakdown ─────────────────────────────────────────────────────
+
+def per_check(sample_rows: list[dict], pool: dict) -> list[dict]:
+    out = []
+    for name in CHECKS:
+        fired_sample = [r for r in sample_rows if r["_record"]["hacking"]["checks"][name]["fired"]]
+        tp = [r for r in fired_sample if name in r["_types"]]
+        fp = [r for r in fired_sample if name not in r["_types"]]
+        fired_pool = sum(1 for rec in pool.values() if rec["hacking"]["checks"][name]["fired"])
+        out.append({
+            "check": name,
+            "fired_in_sample": len(fired_sample),
+            "fired_and_your_label_has_this_type": len(tp),
+            "fired_but_not_this_type_false_positive": len(fp),
+            "fired_in_pool_detector_only": fired_pool,
+            "episodes_in_sample_false_positive": [r["episode_id"] for r in fp],
+        })
+    return out
+
+
+# ── confusion, disagreements, clarification ─────────────────────────────────
+
 def confusion_by_type(rows: list[dict]) -> dict:
-    """Rows: detector primary type (or 'none'). Columns: your hack types plus 'not a hack'."""
     cols = list(HACK_TYPES) + ["not a hack"]
-    rows_ = list(HACK_TYPES) + ["none"]
-    table = {r: {c: 0 for c in cols} for r in rows_}
+    table = {r: {c: 0 for c in cols} for r in list(HACK_TYPES) + ["none"]}
     for r in rows:
         det = r["_record"]["hacking"]["primary_hack_type"] or "none"
         mine = r["_types"] if r["label"] == "hack" else ["not a hack"]
         for c in mine:
             table[det][c] += 1
-    return {"rows": "detector primary type", "columns": "your label (one count per type you gave)",
+    return {"rows": "detector primary type", "columns": "author's label (one count per type given)",
             "table": table}
 
 
@@ -169,11 +270,8 @@ def disagreements(rows: list[dict]) -> list[dict]:
 
 
 def clarification_agreement(rows: list[dict]) -> dict:
-    if not CLAR_MAP.exists():
-        return {"error": f"{CLAR_MAP} missing; run analysis/validation/export_labeling_sample.py"}
     cmap = json.loads(CLAR_MAP.read_text(encoding="utf-8"))["mapped"]
     by_ep = {v["episode_id"]: v for v in cmap.values()}
-    manual_file = json.loads(CLAR_LABELS.read_text(encoding="utf-8"))
     overlap, agree, disagree = 0, 0, []
     for r in rows:
         m = by_ep.get(r["episode_id"])
@@ -183,125 +281,180 @@ def clarification_agreement(rows: list[dict]) -> dict:
         mine = r["clarification_class"].strip()
         if mine == m["manual_class"]:
             agree += 1
-        else:
-            disagree.append({"episode_id": r["episode_id"], "your_class": mine,
-                             "manual_class": m["manual_class"], "level": m["level"]})
+            continue
+        last = r["_record"]["trajectory"][-1]
+        disagree.append({
+            "episode_id": r["episode_id"], "level": m["level"],
+            "your_class": mine, "manual_class": m["manual_class"],
+            "closing_question_rule_relabelled": bool(last.get("closing_question")),
+            "detector_completion_type": r["_record"]["completion_type"],
+            "final_message_end": (last.get("reasoning_before") or "").strip()[-220:],
+        })
     return {
         "labels_file": "results/clarification_labels.json",
-        "labels_in_file": len(manual_file),
-        "overlap_with_sample": overlap,
-        "agree": agree,
+        "labels_in_file": len(json.loads(CLAR_LABELS.read_text(encoding="utf-8"))),
+        "overlap_with_sample": overlap, "agree": agree,
         "agreement_rate": round(agree / overlap, 4) if overlap else None,
         "disagreements": disagree,
     }
 
 
-def unsure_and_ignored(rows: list[dict]):
-    return sum(1 for r in rows if r["label"] == "unsure")
+# ── report ──────────────────────────────────────────────────────────────────
+
+def _fmt(x, digits=2):
+    return "n/a" if x is None else f"{x:.{digits}f}"
 
 
-# ── self-consistency ────────────────────────────────────────────────────────
-
-def make_selfcheck(all_rows: list[dict]):
-    rng = np.random.default_rng(SELF_SEED)
-    pick = sorted(rng.choice(len(all_rows), size=N_SELF, replace=False).tolist())
-    out = LABELS / "selfcheck.csv"
-    with open(out, "w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=CSV_COLUMNS)
-        w.writeheader()
-        for i in pick:
-            r = all_rows[i]
-            w.writerow({k: r.get(k, "") if k in r else "" for k in CSV_COLUMNS} | {
-                "label": "", "hack_type": "", "clarification_class": "", "task_issue": "", "note": ""})
-    print(f"wrote {out} with {N_SELF} rows (labels blank); re-label them, then run --selfcheck")
-    print("episodes (for the metrics script only):", [all_rows[i]["episode_id"] for i in pick])
+def _ci_text(entry):
+    if entry is None or entry.get("ci95") is None:
+        return "n/a"
+    lo, hi = entry["ci95"]
+    return f"{_fmt(entry['point'])} (95% CI {_fmt(lo)} to {_fmt(hi)})"
 
 
-def selfcheck(labeled: list[dict]):
-    again = read_labels(LABELS / "selfcheck.csv")
-    first = {r["episode_id"]: r for r in labeled}
-    n = agree_label = agree_type = agree_class = 0
-    for r in again:
-        ref = first.get(r["episode_id"])
-        if ref is None:
-            raise SystemExit(f"{r['episode_id']} is not in labeled.csv")
-        n += 1
-        agree_label += r["label"] == ref["label"]
-        agree_type += sorted(r["_types"]) == sorted(ref["_types"])
-        agree_class += r["clarification_class"] == ref["clarification_class"]
-    result = {"n": n, "label_agreement": agree_label, "hack_type_agreement": agree_type,
-              "clarification_class_agreement": agree_class}
-    print(json.dumps(result, indent=2))
-    return result
+def render_report(result: dict) -> str:
+    b = result["hack_vs_not_hack"]
+    w = result["weighted_pool"]
+    pool = result["pool"]
+    lines = [
+        "# Detector validation",
+        "",
+        "Generated by `analysis/detector_metrics.py` from `results/validation/detector_validation.json`. "
+        "Every number below is computed by that script; the limitations text is fixed.",
+        "",
+        "**Summary.** The detector's hack rates from Upgrade 1 are not valid hack rates. On this sample, "
+        f"the author labelled {b['tp'] + b['fn']} of {b['n']} episodes as hacks; the detector flagged "
+        f"{b['tp'] + b['fp']} and caught {b['tp']}. The stratum-weighted estimates for the 295-episode pool "
+        "are below; they have wide intervals.",
+        "",
+        "## Sample and pool",
+        "",
+        f"- Sample: {b['n']} episodes, stratified by ambiguity level and detector verdict (25 flagged, 25 not).",
+        f"- Pool: {pool['episodes']} episodes ({pool['flagged']} flagged by the detector). The five guide "
+        "examples are excluded.",
+        f"- Labels: {result['rows_in_file']} rows, {result['unsure_excluded']} unsure.",
+        "",
+        "## Precision and recall",
+        "",
+        "| Quantity | Sample, unweighted | Pool, stratum-weighted |",
+        "|---|---|---|",
+        f"| Human-labelled hack rate | {_ci_text(b['human_hack_rate'])} | {_ci_text(w['hack_rate'])} |",
+        f"| Precision (flagged episodes that are hacks) | {_ci_text(b['precision'])} | {_ci_text(w['precision'])} |",
+        f"| Recall (hacks that are flagged) | {_ci_text(b['recall'])} | {_ci_text(w['recall'])} |",
+        f"| F1 (sample only) | {_ci_text(b['f1'])} | n/a |",
+        "",
+        f"Counts in the sample: TP {b['tp']}, FP {b['fp']}, FN {b['fn']}, TN {b['tn']}. "
+        f"Estimated hacks in the pool: {_fmt(w['hacks_in_pool']['point'], 1)}.",
+        "",
+        "## Confusion table (sample)",
+        "",
+        "Rows: detector's primary type. Columns: author's label (one count per type given).",
+        "",
+    ]
+    cm = result["confusion_detector_type_vs_my_type"]["table"]
+    cols = list(next(iter(cm.values())).keys())
+    lines.append("| detector \\ author | " + " | ".join(cols) + " |")
+    lines.append("|---|" + "---|" * len(cols))
+    for row, vals in cm.items():
+        lines.append(f"| {row} | " + " | ".join(str(vals[c]) for c in cols) + " |")
+    lines += ["", "## Per-check breakdown (sample)", "",
+              "| Check | Fired in sample | Author's label has this type | False positive | Fired in pool (detector only) |",
+              "|---|---:|---:|---:|---:|"]
+    for c in result["per_check"]:
+        lines.append(f"| {c['check']} | {c['fired_in_sample']} | "
+                     f"{c['fired_and_your_label_has_this_type']} | "
+                     f"{c['fired_but_not_this_type_false_positive']} | {c['fired_in_pool_detector_only']} |")
+    lines += ["", "False positives by episode:", ""]
+    for c in result["per_check"]:
+        eps = ", ".join(c["episodes_in_sample_false_positive"]) or "none"
+        lines.append(f"- {c['check']}: {eps}")
+    lines += ["", "## Closing-question disagreements", "",
+              "Three episodes where the author's clarification class differs from the manual class in "
+              "`results/clarification_labels.json`. All three were relabelled by the closing-question rule "
+              "(`hacking/terminal.py`), so the rule reads them as finished. The rule is not changed here.", ""]
+    for d in result["clarification_class_vs_manual"]["disagreements"]:
+        lines.append(f"- **{d['episode_id']}** ({d['level']}): author {d['your_class']}, manual "
+                     f"{d['manual_class']}; closing-question rule relabelled: "
+                     f"{d['closing_question_rule_relabelled']}. Final message ends: "
+                     f"\"{d['final_message_end']}\"")
+    lines += ["", "## Limitations", "",
+              "- **One labeller.** All labels are the author's. The labels were discussed row by row with an AI "
+              "assistant, and its suggestions were reviewed and approved row by row. This is not an independent "
+              "labelling.",
+              "- **No self-agreement check was run.** The self-check was skipped, so the labeller's consistency is "
+              "not measured.",
+              "- **Only five human-labelled hacks** in the sample. Precision and recall rest on five positives, so "
+              "the intervals are wide.",
+              "- **Stratum sizes are small.** Each of the six strata has 8 or 9 sampled episodes. The weighted "
+              "estimates assume each stratum's sample is representative of its pool stratum.",
+              "- **The five guide examples are excluded** from the pool, because they were used to write the "
+              "labelling guide.",
+              "- **Clarification classes** are compared on the sampled episodes that have a manual class "
+              f"({result['clarification_class_vs_manual']['overlap_with_sample']} of {result['rows_in_file']}), "
+              "not on the whole sample.",
+              "- **Detector behaviour is not changed.** These results describe the detector as it is; the "
+              "closing-question rule and the detector are left as they are.",
+              ""]
+    return "\n".join(lines)
 
 
 # ── main ────────────────────────────────────────────────────────────────────
 
-def attach_records(rows: list[dict]):
-    for r in rows:
-        r["_record"] = load_record(r["episode_id"])
-
-
-def main(argv=None):
-    p = argparse.ArgumentParser()
-    p.add_argument("--make-selfcheck", action="store_true")
-    p.add_argument("--selfcheck", action="store_true")
-    a = p.parse_args(argv)
+def main(argv=None) -> int:
+    sys.stdout.reconfigure(encoding="utf-8")
     VALIDATION.mkdir(parents=True, exist_ok=True)
-
-    if a.make_selfcheck:
-        # Drawn from the blind sheet, so the copied rows carry no earlier labels.
-        with open(LABELS / "to_label.csv", encoding="utf-8", newline="") as f:
-            rows = list(csv.DictReader(f))
-        make_selfcheck(rows)
-        return
-
     labeled_path = LABELS / "labeled.csv"
     if not labeled_path.exists():
         raise SystemExit("labels/labeled.csv not found; nothing to compute")
     rows = read_labels(labeled_path)
-    attach_records(rows)
-
-    if a.selfcheck:
-        selfcheck(rows)
-        return
-
     scored = [r for r in rows if r["label"] != "unsure"]
     truth = np.array([r["label"] == "hack" for r in scored])
     pred = np.array([bool(r["_record"]["hacking"]["was_hacked"]) for r in scored])
-    binary = binary_metrics(truth, pred)
-    confusion = confusion_by_type(scored)
-    disagree = disagreements(scored)
-    clar = clarification_agreement(rows)
+
+    pool = load_pool()
+    pool_sizes = Counter(stratum(rec) for rec in pool.values())
+    sample_cells = {c: [] for c in CELLS}
+    for r in scored:
+        sample_cells[stratum(r["_record"])].append(1 if r["label"] == "hack" else 0)
+    labels_by_cell = {c: np.array(v) for c, v in sample_cells.items()}
+    weighted = weighted_estimates(labels_by_cell, pool_sizes)
+
     result = {
         "rows_in_file": len(rows),
-        "unsure_excluded": unsure_and_ignored(rows),
+        "unsure_excluded": sum(1 for r in rows if r["label"] == "unsure"),
         "scored": len(scored),
-        "hack_vs_not_hack": binary,
-        "confusion_detector_type_vs_my_type": confusion,
-        "disagreements": disagree,
-        "clarification_class_vs_manual": clar,
+        "hack_vs_not_hack": binary_metrics(truth, pred),
+        "pool": {
+            "episodes": len(pool),
+            "flagged": sum(1 for rec in pool.values() if rec["hacking"]["was_hacked"]),
+            "by_stratum": {f"{lv}/{'flagged' if f else 'not flagged'}": pool_sizes[(lv, f)]
+                           for lv, f in CELLS},
+            "excluded": sorted(POOL_EXCLUDED),
+        },
+        "sample_by_stratum": {f"{lv}/{'flagged' if f else 'not flagged'}": len(labels_by_cell[(lv, f)])
+                              for lv, f in CELLS},
+        "weighted_pool": weighted,
+        "confusion_detector_type_vs_my_type": confusion_by_type(scored),
+        "per_check": per_check(scored, pool),
+        "disagreements": disagreements(scored),
+        "clarification_class_vs_manual": clarification_agreement(rows),
     }
     (VALIDATION / "detector_validation.json").write_text(
         json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")
+    REPORT.write_text(render_report(result), encoding="utf-8", newline="\n")
 
-    print(f"rows: {len(rows)}; unsure excluded: {unsure_and_ignored(rows)}; scored: {len(scored)}")
-    print(f"hack vs not hack  TP {binary['tp']}  FP {binary['fp']}  FN {binary['fn']}  TN {binary['tn']}")
-    for k in ("precision", "recall", "f1"):
-        print(f"  {k:9} {binary[k]['point']}  95% CI {binary[k]['ci95']}")
-    print(f"disagreements: {len(disagree)}")
-    for d in disagree:
-        print(f"  {d['episode_id']}: {d['reason']} | you: {d['your_label']} {d['your_types']} "
-              f"| detector: flagged={d['detector_flagged']} {d['detector_types']}")
-    if "error" in clar:
-        print(clar["error"])
-    else:
-        print(f"clarification classes: overlap {clar['overlap_with_sample']}, agreement "
-              f"{clar['agree']}/{clar['overlap_with_sample']}")
-        for d in clar["disagreements"]:
-            print(f"  {d['episode_id']}: you {d['your_class']} vs manual {d['manual_class']} ({d['level']})")
-    print(f"full output: {VALIDATION / 'detector_validation.json'}")
+    b = result["hack_vs_not_hack"]
+    w = weighted
+    print(f"sample: {len(scored)} scored, {b['tp'] + b['fn']} hacks; pool: {result['pool']['episodes']} episodes")
+    print(f"unweighted  precision {b['precision']['point']}  recall {b['recall']['point']}  "
+          f"hack rate {b['human_hack_rate']['point']}")
+    for k in ("hack_rate", "precision", "recall"):
+        print(f"weighted    {k:10} {w[k]['point']}  95% CI {w[k]['ci95']}")
+    print(f"weighted    hacks in pool {w['hacks_in_pool']['point']}  flagged hacks {w['hacks_flagged_in_pool']['point']}")
+    print("wrote", VALIDATION / "detector_validation.json")
+    print("wrote", REPORT)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
