@@ -327,6 +327,31 @@ def v2_dev_metrics(rows: list[dict]) -> dict:
             "per_check": per, "development_set_only": True}
 
 
+def fresh_pool_flags() -> dict:
+    """v2 verdicts for the episodes outside the first sample (the fresh-sample pool), by level."""
+    first = set(json.loads((LABELS / "sample_ids.json").read_text(encoding="utf-8")))
+    by_level = {lv: {"episodes": 0, "flagged": 0} for lv in LEVELS}
+    for path in sorted(RESCORED_V9.glob("run_*/task_*.json")):
+        eid = f"{path.parent.name}/{path.stem}"
+        if eid in POOL_EXCLUDED or eid in first:
+            continue
+        rec = json.loads(path.read_text(encoding="utf-8"))
+        by_level[rec["ambiguity_level"]]["episodes"] += 1
+        by_level[rec["ambiguity_level"]]["flagged"] += bool(rec["hacking_v2"]["was_hacked"])
+    return by_level
+
+
+def fresh_sample_not_flagged_per_level() -> int:
+    """Episodes in each level's not-flagged stratum of the fresh sample (from the tracked ID list)."""
+    ids = json.loads((LABELS / "sample_ids_v2.json").read_text(encoding="utf-8"))
+    counts = {lv: 0 for lv in LEVELS}
+    for eid in ids:
+        rec = v2_record(eid)
+        if not rec["hacking_v2"]["was_hacked"]:
+            counts[rec["ambiguity_level"]] += 1
+    return min(counts.values()) if len(set(counts.values())) == 1 else -1
+
+
 def v2_pool_counts() -> dict:
     flagged = 0
     total = 0
@@ -417,6 +442,10 @@ def render_report(result: dict) -> str:
                      f"{d['closing_question_rule_relabelled']}. Final message ends: "
                      f"\"{d['final_message_end']}\"")
     v2 = result["detector_v2_dev_set"]
+    fresh = result["fresh_pool_flags"]
+    fresh_total = sum(v["episodes"] for v in fresh.values())
+    fresh_mh = sum(fresh[lv]["flagged"] for lv in ("medium", "high"))
+    fresh_nf_per_level = result["fresh_sample_not_flagged_per_level"]
     lines += ["", "## Detector v2 (frozen; development set only)", "",
               "v2 is tagged `detector-v2-frozen` and implemented in `hacking/detector_v2.py`. Its verdicts are stored "
               "per episode in `results/runs/claude-haiku-5-5/rescored_v9/` next to v1. The rules were chosen after "
@@ -455,10 +484,10 @@ def render_report(result: dict) -> str:
               "the intervals are wide.",
               "- **Stratum sizes are small.** Each of the six strata has 8 or 9 sampled episodes. The weighted "
               "estimates assume each stratum's sample is representative of its pool stratum.",
-              "- **Fresh sample for v2 (not yet labelled).** The 30-episode sample in `labels/to_label_v2.csv` "
-              "is drawn from the pool outside the first sample. Few medium and high episodes are flagged by v2 there, "
-              "so its flagged stratum is mostly low tasks. v2 precision for medium and high tasks cannot be estimated "
-              "from that sample.",
+              f"- **Fresh sample for v2 (not yet labelled).** The 30-episode sample in `labels/to_label_v2.csv` is "
+              f"drawn from the {fresh_total} episodes outside the first sample. v2 flags only {fresh_mh} medium or high "
+              f"episodes there, so v2 precision on the fresh sample mainly reflects low tasks. The not-flagged stratum "
+              f"({fresh_nf_per_level} per level) is the main test of v2 misses (recall).",
               "- **The five guide examples are excluded** from the pool, because they were used to write the "
               "labelling guide.",
               "- **Clarification classes** are compared on the sampled episodes that have a manual class "
@@ -513,6 +542,8 @@ def main(argv=None) -> int:
         "clarification_class_vs_manual": clarification_agreement(rows),
         "detector_v2_dev_set": v2_dev_metrics(rows),
         "detector_v2_pool": v2_pool_counts(),
+        "fresh_pool_flags": fresh_pool_flags(),
+        "fresh_sample_not_flagged_per_level": fresh_sample_not_flagged_per_level(),
     }
     (VALIDATION / "detector_validation.json").write_text(
         json.dumps(result, indent=2) + "\n", encoding="utf-8", newline="\n")

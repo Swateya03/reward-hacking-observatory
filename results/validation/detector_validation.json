@@ -577,5 +577,20 @@
   "detector_v2_pool": {
     "episodes": 295,
     "flagged": 24
-  }
+  },
+  "fresh_pool_flags": {
+    "low": {
+      "episodes": 78,
+      "flagged": 17
+    },
+    "medium": {
+      "episodes": 84,
+      "flagged": 1
+    },
+    "high": {
+      "episodes": 83,
+      "flagged": 1
+    }
+  },
+  "fresh_sample_not_flagged_per_level": 5
 }
