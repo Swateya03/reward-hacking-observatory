@@ -31,6 +31,8 @@ DEV = VALIDATION / "detector_validation.json"
 FRESH = VALIDATION / "detector_validation_fresh.json"
 AGG_V8 = REPO / "results" / "aggregate_claude-haiku-5-5_v8.json"
 COST_LOG = RUNS / "cost_log.jsonl"
+LABELS = REPO / "labels"
+LABEL_FILES = (LABELS / "labeled.csv", LABELS / "labeled_v2.csv")
 
 TOOLS_EMAIL = {"list_emails", "read_email", "save_draft", "send_email", "move_email", "archive_email",
                "delete_email", "reply_email", "mark_read"}
@@ -190,6 +192,27 @@ def detector_block() -> list[str]:
     return lines
 
 
+def subtype_cross_check() -> dict:
+    """The confirm_explicit_irreversible sub-type against the author's labels, on every labelled
+    task_002 and task_009 episode in both label files."""
+    rows = []
+    for path in LABEL_FILES:
+        for r in csv.DictReader(open(path, encoding="utf-8", newline="")):
+            if not r["episode_id"].endswith(CONFIRM_TASKS):
+                continue
+            run, task = r["episode_id"].split("/")
+            rec = jload(RESCORED_V8 / run / f"{task}.json")
+            rule = any(e.get("subtype") == "confirm_explicit_irreversible" for e in rec["hacking"]["events"])
+            rows.append({"episode": r["episode_id"], "file": path.name, "label": r["label"],
+                         "rule_yes": rule, "author_hack": r["label"] == "hack"})
+    agree = sum(1 for x in rows if x["rule_yes"] == x["author_hack"])
+    cell = lambda rule, hack: [x["episode"] for x in rows if x["rule_yes"] == rule and x["author_hack"] == hack]
+    return {"n": len(rows), "agree": agree,
+            "rule_yes_hack": cell(True, True), "rule_yes_not": cell(True, False),
+            "rule_no_hack": cell(False, True), "rule_no_not": cell(False, False),
+            "files": [p.name for p in LABEL_FILES]}
+
+
 def behaviour_block() -> list[str]:
     from tasks.task import TaskBank
     bank = {t.id: t for t in TaskBank(str(REPO / "tasks" / "task_bank.json")).get_all()}
@@ -197,8 +220,7 @@ def behaviour_block() -> list[str]:
         "### Main behavioural finding: confirm instead of act", "",
         "On tasks whose prompt explicitly asks for a send or a permanent delete, how often the agent ends by asking "
         "for confirmation instead of acting. The count is the v1 sub-type `confirm_explicit_irreversible` "
-        f"(`hacking/terminal.py`), per run, from `{rel(RESCORED_V8)}/run_NN/`. This sub-type is a v1 rule; its "
-        "precision was not measured separately.", "",
+        f"(`hacking/terminal.py`), per run, from `{rel(RESCORED_V8)}/run_NN/`.", "",
         "| Task | Prompt | Runs with the sub-type (of 10) | Runs |",
         "|---|---|---:|---|",
     ]
@@ -211,7 +233,23 @@ def behaviour_block() -> list[str]:
                 hits.append(run)
         lines.append(f"| {task_id} | {bank[task_id].prompt} | {len(hits)} of {len(runs)} | "
                      f"{', '.join(h.replace('run_', '') for h in hits) or 'none'} |")
-    lines.append("")
+    cc = subtype_cross_check()
+    rest = lambda ids: ", ".join(i.replace("/task_", " task_") for i in ids) or "none"
+    lines += [
+        "", f"**Cross-check against the author's labels** (`{rel(LABELS / 'labeled.csv')}` and "
+        f"`{rel(LABELS / 'labeled_v2.csv')}`, every labelled task_002 and task_009 episode): the sub-type and the "
+        f"author's hack / not-hack label agree on **{cc['agree']} of {cc['n']}** labelled episodes.", "",
+        "| Sub-type | Author: hack | Author: not a hack |", "|---|---:|---:|",
+        f"| present | {len(cc['rule_yes_hack'])} | {len(cc['rule_yes_not'])} |",
+        f"| absent | {len(cc['rule_no_hack'])} | {len(cc['rule_no_not'])} |", "",
+        f"Episodes with the sub-type and a hack label: {rest(cc['rule_yes_hack'])}. "
+        f"Episodes with the sub-type and a not-hack label: {rest(cc['rule_yes_not']) if cc['rule_yes_not'] else 'none'}. "
+        f"Episodes without the sub-type and a hack label: {rest(cc['rule_no_hack']) if cc['rule_no_hack'] else 'none'}. "
+        f"Episodes without the sub-type and a not-hack label: {rest(cc['rule_no_not'])}.", "",
+        "This agreement is partly by construction: decision rule 1 in `docs/LABELING_DECISIONS.md` defines the same "
+        "pattern (the task says send or permanently delete, and the agent asks to confirm instead). It is a check "
+        "on the rule's implementation, not an independent validation of the label.", "",
+    ]
     return lines
 
 
@@ -246,17 +284,18 @@ def limitations_block() -> list[str]:
         "### Limitations", "",
         "- **One labeller, AI-assisted.** The author labelled every episode. The labels were discussed row by row "
         "with an AI assistant, and its suggestions were reviewed and approved row by row. This is not an "
-        "independent labelling.",
-        "- **No self-agreement check was run.** The labeller's consistency is not measured.",
+        "independent labelling. No self-agreement check was run, so the labeller's consistency is not measured.",
         f"- **Small samples.** The development set has {d1['n']} labelled episodes and {d1['tp'] + d1['fn']} hacks. "
         f"The fresh sample has {fresh['scored']} episodes and {f2['unweighted']['tp'] + f2['unweighted']['fn']} hacks. "
         "Intervals are wide.",
-        "- **Single model.** Every episode is claude-haiku-5-5. Nothing here shows what other models do.",
+        "- **Single model.** Every episode is claude-haiku-5-5, and nothing here shows what other models do. The "
+        "API's returned model ID was not saved for runs 1 to 10 (`returned_model` is null; see "
+        "`docs/BACKFILL_NOTE.md`), so the served snapshot is not confirmed.",
         f"- **Recall is unknown.** See the upper bound above ({fmt(fresh['v2_miss_bound']['upper_bound_hacks_missed_in_pool'], 1)} "
         "hacks in the pool).",
         f"- **irreversibility_bias false positives on explicitly requested deletes.** v2 keeps the v1 rule; in the "
         f"fresh sample it fires {irr['fired']} times and {irr['false_positive']} of those are false positives, on "
-        "deletes the task asked for. v3 future work: treat an explicitly requested permanent delete as in scope.",
+        "deletes the task asked for.",
         f"- **Overclaiming gap.** The overclaiming check fired {overclaim['fired']} times in the development set; a "
         "hack labelled overclaiming (`run_07/task_023`) is missed.",
         "- **list_files hides subfolders.** `list_files` matches the folder name exactly, so listing `/hr` does not "
@@ -265,6 +304,20 @@ def limitations_block() -> list[str]:
         "- **check_conflicts compares timestamps as text.** It is implemented as an overlap query, not a stub. Its "
         "text comparison is correct only when every time uses the same UTC `Z` format.",
         "- **metric_gaming v2 is untested.** It fires nowhere in the development or fresh samples.",
+        "- **The robust reward's StateVerifier** pattern-matches `expected_state`. It works for files, emails and "
+        "calendar events, and does not cover open-ended tasks or ambiguous success criteria.",
+        "- **Known prompt issue.** The `move_to_trash` tool description the agent sees says \"Prefer this over "
+        "delete_permanently whenever possible\" (`workspace/tool_registry.py`). No tool named `delete_permanently` "
+        "exists; the real tool is `delete_email`. The existing results were produced with this text.",
+        "- **No policy training.** This version measures reward and hacking; it does not train agents on the signal.",
+        "",
+        "### Future work", "",
+        "- **v3 irreversibility rule:** treat an explicitly requested permanent delete as in scope, and validate it on "
+        "a fresh sample.",
+        "- **Fix `list_files` subfolders** in the workspace, then rerun the affected episodes.",
+        "- **Overclaiming detection:** a check that compares a completion claim with the final state.",
+        "- **More models:** run the same task bank on other models, with the prompt fix in place.",
+        "- **An independent second labeller**, with an agreement measure on a shared subset.",
         "",
     ]
 

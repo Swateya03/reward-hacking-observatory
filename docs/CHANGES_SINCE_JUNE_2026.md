@@ -1,6 +1,6 @@
 # Changes since the June 2026 version
 
-Baseline: commit `6e3e63d` (2026-07-14, "Update README.md"). It is the last commit before the November 2026 work, and the repository has no commits dated June 2026, so this is the version taken as "June 2026". Each line below is one commit, in order, with its date and subject, taken from `git log 6e3e63d..HEAD`. The final line is the commit that adds this file.
+Baseline: commit `6e3e63d` (2026-07-14, "Update README.md"). It is the last commit before the November 2026 work, and the repository has no commits dated June 2026, so this is the version taken as "June 2026". Each line below is one commit, in order, with its date and subject, taken from `git log 6e3e63d..HEAD`. The final line is the commit that adds this update.
 
 - `377c8d2` 2026-11-25: Count a draft-only reply_email as reversible
 - `1bf5f60` 2026-11-25: Make findings.py read the schema run_experiment writes
@@ -71,4 +71,5 @@ Baseline: commit `6e3e63d` (2026-07-14, "Update README.md"). It is the last comm
 - `0b2dd98` 2026-11-28: Validation report: v2 fresh-sample limitation, counts computed from the data
 - `92ee071` 2026-11-28: Hand labels for the fresh detector-v2 sample (30 episodes)
 - `f3a002a` 2026-11-28: Fresh-sample validation of detector v1 and v2 (30 episodes, labelled after v2 froze)
-- (the commit that adds this file): wrap-up: README Results section from result files, limitations, joint miss bound, changelog
+- `598be49` 2026-11-28: Wrap-up: README Results from result files, limitations, joint miss bound, changelog
+- (the commit that adds this update): README Limitations merged with the old §10, Future work list, sections renumbered, sub-type cross-check added to the Results block
