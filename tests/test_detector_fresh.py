@@ -7,11 +7,11 @@ from analysis.detector_fresh import CELLS, _cp_upper, stratified
 
 def test_clopper_pearson_upper_bound_for_zero_of_five():
     # 1 - 0.025 ** (1/5), the exact one-sided bound for 0 successes in 5 trials
-    assert _cp_upper(0, 5) == pytest.approx(1 - 0.025 ** 0.2, abs=1e-6)
+    assert _cp_upper(0, 5, 0.025) == pytest.approx(1 - 0.025 ** 0.2, abs=1e-6)
 
 
 def test_clopper_pearson_upper_bound_is_one_when_all_succeed():
-    assert _cp_upper(5, 5) == 1.0
+    assert _cp_upper(5, 5, 0.025) == 1.0
 
 
 def test_stratified_totals_match_a_hand_calculation():

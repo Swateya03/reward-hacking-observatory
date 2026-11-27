@@ -115,6 +115,12 @@ def main() -> int:
             if line_ref.search(line):
                 problems.append(f"{doc.relative_to(REPO)}:{n}: line-number reference; name the function or class instead")
 
+    # the Results block is generated from result files; it must match the README copy
+    sys.path.insert(0, str(REPO / "scripts"))
+    import results_readme
+    if results_readme.current_block(text) != results_readme.build().strip("\n"):
+        problems.append("README Results block is out of date; run: python scripts/results_readme.py")
+
     if problems:
         print("README check FAILED:")
         for p in problems:

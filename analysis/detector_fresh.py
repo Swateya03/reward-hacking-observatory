@@ -215,7 +215,7 @@ def per_check(rows: list[dict], types_key: str) -> list[dict]:
     return out
 
 
-def _cp_upper(x: int, n: int, alpha_one_sided: float = 0.025) -> float:
+def _cp_upper(x: int, n: int, alpha_one_sided: float) -> float:
     """Exact (Clopper-Pearson) upper bound for a proportion with x successes out of n."""
     from math import comb
 
@@ -235,21 +235,25 @@ def _cp_upper(x: int, n: int, alpha_one_sided: float = 0.025) -> float:
 
 
 def miss_upper_bound(rows: list[dict], pool: dict) -> dict:
-    """Upper bound (95%, one-sided Clopper-Pearson per stratum, summed over the pool) on the number of
-    hacks that v2 does not flag. Each unflagged stratum contributes N_h times its bound."""
+    """Joint 95% upper bound on the number of hacks v2 does not flag in the pool. Each not-flagged stratum
+    gets an exact one-sided Clopper-Pearson bound at level 0.05 / k, with k the number of not-flagged strata
+    (Bonferroni), so all k bounds hold together with probability at least 95%. The bound on misses is the
+    sum over strata of N_h times its bound."""
+    unflagged = [c for c in CELLS if not c[1]]
+    alpha = 0.05 / len(unflagged)
     total = 0.0
     per = {}
-    for c in CELLS:
-        if c[1]:
-            continue
+    for c in unflagged:
         cell = [r for r in rows if (r["level"], r["v2_flag"]) == c]
         x = sum(1 for r in cell if r["is_hack"])
-        u = _cp_upper(x, len(cell))
+        u = _cp_upper(x, len(cell), alpha)
         per[f"{c[0]}/v2 not flagged"] = {"hacks_in_sample": x, "sample": len(cell),
                                           "upper_rate": round(u, 4), "pool": pool[c],
                                           "upper_hacks_in_pool": round(u * pool[c], 2)}
         total += u * pool[c]
-    return {"per_stratum": per, "upper_bound_hacks_missed_in_pool": round(total, 2)}
+    return {"per_stratum": per, "upper_bound_hacks_missed_in_pool": round(total, 2),
+            "method": "exact one-sided Clopper-Pearson per stratum at 0.05/k (Bonferroni), summed over N_h",
+            "alpha_per_stratum": round(alpha, 6)}
 
 
 def compute() -> dict:
@@ -332,8 +336,8 @@ def render_md(r: dict) -> list[str]:
     for name, e in mb["per_stratum"].items():
         lines.append(f"| {name} | {e['hacks_in_sample']} | {e['sample']} | {e['upper_rate']:.2f} | "
                      f"{e['pool']} | {e['upper_hacks_in_pool']:.1f} |")
-    lines += ["", f"Upper bound on hacks v2 misses in the 245-episode pool: **{mb['upper_bound_hacks_missed_in_pool']:.1f}** "
-              "(95%). This bound is wide; the sample cannot show that v2 misses few hacks.", ""]
+    lines += ["", f"Joint 95% upper bound on hacks v2 misses in the 245-episode pool: **{mb['upper_bound_hacks_missed_in_pool']:.1f}**. "
+              f"Method: {mb['method']}. This bound is wide; the sample cannot show that v2 misses few hacks.", ""]
     for name, d in (("v1", v1), ("v2", v2)):
         lines += [f"### Confusion table, {name} (fresh sample)", "",
                   "Rows: detector's primary type. Columns: your label (one count per type given).", ""]

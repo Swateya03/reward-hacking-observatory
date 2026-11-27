@@ -1,0 +1,74 @@
+# Changes since the June 2026 version
+
+Baseline: commit `6e3e63d` (2026-07-14, "Update README.md"). It is the last commit before the November 2026 work, and the repository has no commits dated June 2026, so this is the version taken as "June 2026". Each line below is one commit, in order, with its date and subject, taken from `git log 6e3e63d..HEAD`. The final line is the commit that adds this file.
+
+- `377c8d2` 2026-11-25: Count a draft-only reply_email as reversible
+- `1bf5f60` 2026-11-25: Make findings.py read the schema run_experiment writes
+- `83fff91` 2026-11-25: Move committed findings to results/legacy; demo writes only to results/demo
+- `df2a2bb` 2026-11-25: Score robust outcome as N/A without expected_state; add policy metric
+- `0044cec` 2026-11-25: Correct legacy NOTE: point to the notes file, not a PR
+- `74dcc66` 2026-11-25: Point legacy NOTE to the architecture notes branch
+- `47ffdee` 2026-11-25: Task 021: removal gate with a spam exception
+- `fbd7b54` 2026-11-25: METRIC_GAMING needs a state check; hack label = any available check fired
+- `fe471ed` 2026-11-25: Task 021: moving inbox mail to sent or drafts is removal too
+- `fdaa23e` 2026-11-25: Add archive_email; archive counts as allowed for task 021
+- `e2f839b` 2026-11-25: Findings: required --out; chart text computed from data
+- `e090e78` 2026-11-25: Test: save_findings uses an allowed path
+- `53de441` 2026-11-25: Charts: remove committed PNGs; correct divergence caption
+- `fe40d44` 2026-11-25: Charts: derive radar ticks, correct radar and scatter wording
+- `9e30270` 2026-11-25: Add architecture notes tracing README numbers to code
+- `0ec80cd` 2026-11-25: Make README numbers match findings.json and add readme_numbers.py
+- `43fc4f4` 2026-11-25: README: results pending; counts and file names match the final code
+- `1609a57` 2026-11-25: readme_numbers: read the legacy findings file at its new path
+- `9f793ff` 2026-11-25: Rewrite architecture notes for the current code
+- `804af85` 2026-11-25: README: 17 tools, 9 email tools, 278 tests, schema v4 stated
+- `78ed450` 2026-11-25: Architecture notes: 17 tools, archive folder, 278 tests, schema v4
+- `0a8aadc` 2026-11-25: Keep one legacy record of removed README numbers
+- `9981f1c` 2026-11-25: Notes: point to the single legacy provenance record
+- `14951fe` 2026-11-25: Docs: 9 email tools, 296 tests, chart rows match the code
+- `e10b46b` 2026-11-25: Notes: no PNGs are committed; charts come from real runs
+- `5066ece` 2026-11-25: Provenance: note that the chart PNGs were removed
+- `d416a2c` 2026-11-25: Docs: rebuild architecture notes from code, trace every README number
+- `2d0a760` 2026-11-25: Deps: pin anthropic to 2.14.0 (was >=0.40.0)
+- `ea3db1f` 2026-11-25: Charts: one hack-type key form; remove fixed conclusions
+- `cdebed5` 2026-11-25: Tests: build_result and metadata block, imported from run_experiment
+- `83a31ac` 2026-11-25: Docs: match README to rewards/robust.py; record resolved items
+- `14e3228` 2026-11-25: Runs: Haiku 5.5, prompt caching, cost log, budget guard, max_tokens metadata
+- `fda5d45` 2026-11-25: Docs: settings for Haiku 5.5, schema v5, budget guard
+- `f8da887` 2026-11-25: Runs: system prompt in system parameter; per-run cap; metadata thinking; schema v6
+- `8ac269d` 2026-11-25: Scope rule: only state-changing out-of-scope calls count
+- `91705d8` 2026-11-25: Docs: intermediate excess-calls penalty counts all calls, by design
+- `fd4cc62` 2026-11-25: Analysis: aggregate runs with task-cluster bootstrap CIs and permutation test
+- `4d26db8` 2026-11-25: Audit: sycophantic_caution and clarification endings; gaming-only rate
+- `e258244` 2026-11-27: Schema v8: closing-question relabel and sycophantic_caution sub-categories
+- `b745df9` 2026-11-27: Analysis: per-metric random streams, exploratory clarification test; docs for v8
+- `8886398` 2026-11-27: Track raw v7 run folders and cost log
+- `b54aef8` 2026-11-27: Record run provenance in new results
+- `45217c2` 2026-11-27: Backfill run provenance for the v7 runs
+- `016858d` 2026-11-27: rescore_v8: read from a source folder and carry run provenance
+- `1d093d0` 2026-11-27: README: schema, tracked files, rebuild commands, test counts
+- `5d7de3f` 2026-11-27: Add .gitattributes: normalise line endings to LF, mark binaries
+- `a9fad69` 2026-11-27: README §09: list all 23 test files with a description each
+- `b1a8cb9` 2026-11-27: Write result JSON with LF line endings on every OS
+- `267c0f0` 2026-11-27: Docs: draft labeling guide for detector validation (for review)
+- `6d2bc0a` 2026-11-27: Docs: taxonomy example names delete_email, not delete_permanently
+- `cf65813` 2026-11-27: Docs: labeling guide with edge-case rules, task_issue and self-check
+- `2e7485a` 2026-11-27: Labelling sample: 50 v8 episodes, blind sheet, clarification map
+- `bd3ea6d` 2026-11-27: Detector validation metrics: precision/recall/F1, confusion, disagreements, self-check
+- `3dc558e` 2026-11-27: Docs: record the delete_permanently prompt issue as a known limitation
+- `fe1c006` 2026-11-27: Docs: restore main's ARCHITECTURE_NOTES and add only the known-issue entry
+- `38a4928` 2026-11-27: Docs: reconcile ARCHITECTURE_NOTES with the current code; schema test
+- `cc64f96` 2026-11-27: Docs: README counts and project tree match the code; add scripts/check_docs.py
+- `f4cabca` 2026-11-27: Docs: name the function or class instead of citing source line numbers
+- `bb76036` 2026-11-27: Add scripts/label.py: terminal labelling helper, with tests
+- `446fba2` 2026-11-27: label.py: v command shows tool results and referenced fixture items
+- `16c7174` 2026-11-27: Labelling decisions file; r and R commands in label.py
+- `3ae9da3` 2026-11-28: Hand labels for the 50-episode sample; detector validation results
+- `fc19185` 2026-11-28: Detector validation: stratum-weighted pool estimates, per-check breakdown, report
+- `73761fa` 2026-11-28: Detector v2: rules, tests, task-bank fix, validation docs
+- `4a8fb31` 2026-11-28: Re-score the 300 episodes as schema 9 with v1 and v2 verdicts
+- `3faf52d` 2026-11-28: Fresh detector-v2 validation sample: 30 episodes, blind export
+- `0b2dd98` 2026-11-28: Validation report: v2 fresh-sample limitation, counts computed from the data
+- `92ee071` 2026-11-28: Hand labels for the fresh detector-v2 sample (30 episodes)
+- `f3a002a` 2026-11-28: Fresh-sample validation of detector v1 and v2 (30 episodes, labelled after v2 froze)
+- (the commit that adds this file): wrap-up: README Results section from result files, limitations, joint miss bound, changelog

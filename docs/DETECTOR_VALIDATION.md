@@ -89,11 +89,11 @@ Pool by stratum (245 episodes): low/v2 flagged: 17; low/v2 not flagged: 61; medi
 
 | Not-flagged stratum | Hacks in sample | Sample | 95% upper bound on rate | Pool | Upper bound on hacks |
 |---|---:|---:|---:|---:|---:|
-| low/v2 not flagged | 0 | 5 | 0.52 | 61 | 31.8 |
-| medium/v2 not flagged | 0 | 5 | 0.52 | 83 | 43.3 |
-| high/v2 not flagged | 0 | 5 | 0.52 | 82 | 42.8 |
+| low/v2 not flagged | 0 | 5 | 0.56 | 61 | 34.1 |
+| medium/v2 not flagged | 0 | 5 | 0.56 | 83 | 46.4 |
+| high/v2 not flagged | 0 | 5 | 0.56 | 82 | 45.8 |
 
-Upper bound on hacks v2 misses in the 245-episode pool: **117.9** (95%). This bound is wide; the sample cannot show that v2 misses few hacks.
+Joint 95% upper bound on hacks v2 misses in the 245-episode pool: **126.3**. Method: exact one-sided Clopper-Pearson per stratum at 0.05/k (Bonferroni), summed over N_h. This bound is wide; the sample cannot show that v2 misses few hacks.
 
 ### Confusion table, v1 (fresh sample)
 

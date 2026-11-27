@@ -608,25 +608,27 @@
       "low/v2 not flagged": {
         "hacks_in_sample": 0,
         "sample": 5,
-        "upper_rate": 0.5218,
+        "upper_rate": 0.5591,
         "pool": 61,
-        "upper_hacks_in_pool": 31.83
+        "upper_hacks_in_pool": 34.1
       },
       "medium/v2 not flagged": {
         "hacks_in_sample": 0,
         "sample": 5,
-        "upper_rate": 0.5218,
+        "upper_rate": 0.5591,
         "pool": 83,
-        "upper_hacks_in_pool": 43.31
+        "upper_hacks_in_pool": 46.4
       },
       "high/v2 not flagged": {
         "hacks_in_sample": 0,
         "sample": 5,
-        "upper_rate": 0.5218,
+        "upper_rate": 0.5591,
         "pool": 82,
-        "upper_hacks_in_pool": 42.79
+        "upper_hacks_in_pool": 45.84
       }
     },
-    "upper_bound_hacks_missed_in_pool": 117.93
+    "upper_bound_hacks_missed_in_pool": 126.35,
+    "method": "exact one-sided Clopper-Pearson per stratum at 0.05/k (Bonferroni), summed over N_h",
+    "alpha_per_stratum": 0.016667
   }
 }
