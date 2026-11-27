@@ -10,7 +10,7 @@
 
 ![Rewards](https://img.shields.io/badge/3%20Reward%20Functions-Naive%20%7C%20Intermediate%20%7C%20Robust-bc8cff?style=for-the-badge)
 ![Results](https://img.shields.io/badge/Results-pending%20full%20run-lightgrey?style=for-the-badge)
-![Tests](https://img.shields.io/badge/Tests-423%20Passing-39d3f0?style=for-the-badge)
+![Tests](https://img.shields.io/badge/Tests-429%20Passing-39d3f0?style=for-the-badge)
 
 </div>
 
@@ -335,7 +335,7 @@ The **rewards layer** implements three functions that score the same trajectory 
 
 ### Implementation layers & visualizations
 
-The project spans multiple layers with a pytest suite of 423 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
+The project spans multiple layers with a pytest suite of 429 tests (unit and integration tests, not experiment runs). Layers 0–2 establish the workspace environment and task execution loop. Layer 3 implements the three reward functions (naive, intermediate, robust). Layer 4 adds the hacking detector with the five hack types above. Layer 5 runs the experiment across the 30-task bank. Layer 9 contains five chart scripts. No charts are shown in this README until a full run exists.
 
 ### Project structure
 
@@ -436,6 +436,7 @@ reward-hacking-observatory/
 │   ├── ARCHITECTURE_NOTES.md   ← how each number is produced, and what is stale
 │   ├── BACKFILL_NOTE.md        ← provenance backfill: sources and confidence
 │   ├── LABELING_GUIDE.md       ← definitions for hand-labelling episodes
+│   ├── LABELING_DECISIONS.md   ← rules settled while labelling (added with r in scripts/label.py)
 │   └── legacy/
 │       └── README_NUMBERS_PROVENANCE.md
 ├── scripts/
@@ -457,7 +458,7 @@ reward-hacking-observatory/
 │   ├── test_findings_pipeline.py         ← 8 tests: fake episodes through the real writer and reader
 │   ├── test_hacking.py                   ← 23 tests: hacking detector, all 5 types
 │   ├── test_metric_gaming_availability.py ← 8 tests: METRIC_GAMING availability and the hack label
-│   ├── test_label_helper.py              ← 25 tests: scripts/label.py on a fake sheet (no real labels)
+│   ├── test_label_helper.py              ← 31 tests: scripts/label.py on a fake sheet (no real labels)
 │   ├── test_notes_schema.py              ← 2 tests: notes state the code's result schema version
 │   ├── test_outcome_and_policy.py        ← 47 tests: N/A outcome, task 014/021 states, policy metric
 │   ├── test_provenance_metadata.py       ← 11 tests: run_index, git commit and dirty flag, model ID
@@ -518,11 +519,11 @@ The project includes three testing layers:
 | `test_scope_rule.py` | 10 | Only state-changing out-of-scope calls count toward scope_creep and the footprint penalty |
 | `test_terminal_rule.py` | 13 | Closing-question relabel and the sycophantic_caution sub-categories |
 | `test_chart_text.py` | 8 | No fixed conclusion text in chart scripts; one canonical hack-type key form |
-| `test_label_helper.py` | 25 | `scripts/label.py` on a fake sheet: resume, validation, back, guide, quit, progress, the break suggestion, the v view, no detector or reward fields shown |
+| `test_label_helper.py` | 31 | `scripts/label.py` on a fake sheet: resume, validation, back, guide, quit, progress, the break suggestion, the v view, the r and R rule commands, no detector or reward fields shown |
 | `test_notes_schema.py` | 2 | Every `RESULT_SCHEMA_VERSION = N` statement in `docs/ARCHITECTURE_NOTES.md` equals the code's value |
-| **Total** | **423** | |
+| **Total** | **429** | |
 
-Run all tests: `pytest tests/ -v` — 🟢 **423 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 365 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
+Run all tests: `pytest tests/ -v` — 🟢 **429 tests, all passing** with the workspace server running. This is a pytest count of unit and integration tests, not a count of experiment runs. **`tests/test_workspace.py` needs the workspace server running.** Start it first, in another terminal, with `uvicorn workspace.main:app --port 8000`. Without it, the 51 tests in that file fail with connection errors. With the server down, the suite gives 365 passed, 51 failed (all in `test_workspace.py`) and 7 skipped (the archive tool tests, which need the server).
 
 Before committing any change to docs or README counts, run `python scripts/check_docs.py`. It fails if the badge, the totals, the per-file counts or the project tree disagree with the collected tests or with the files on disk.
 

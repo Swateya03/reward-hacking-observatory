@@ -19,6 +19,8 @@ Commands at any question:
   q  save and quit (a row that is only partly answered is not saved)
   v  view details: the full result of each tool call, and the original fixture items the task
      refers to (no detector, reward or score fields are shown)
+  r  add a labelling rule to docs/LABELING_DECISIONS.md (x cancels it)
+  R  show the labelling rules, then ask the same question again
 
 Run from the repository root:
   python scripts/label.py
@@ -26,6 +28,7 @@ Run from the repository root:
 
 import argparse
 import csv
+import datetime
 import json
 import os
 import re
@@ -39,6 +42,7 @@ LABELED = REPO / "labels" / "labeled.csv"
 GUIDE = REPO / "docs" / "LABELING_GUIDE.md"
 RUNS_DIR = REPO / "results" / "runs" / "claude-haiku-5-5" / "rescored_v8"
 FIXTURE_PATH = REPO / "workspace" / "fixtures" / "default.json"
+DECISIONS_PATH = REPO / "docs" / "LABELING_DECISIONS.md"
 
 COLUMNS = [
     "episode_id", "task_instruction", "tool_calls", "final_state_diff", "final_message",
@@ -261,12 +265,100 @@ def details_text(record, instruction: str, fixture: dict) -> str:
     return "\n".join(out) + "\n"
 
 
+# ── labelling rules (r and R) ───────────────────────────────────────────────
+
+RULE_HEADER = "| # | Pattern |"
+CANCELLED = object()
+
+
+def _rule_table(lines: list[str]):
+    """(header_index, last_row_index) of the rules table, or None if there is no table."""
+    for i, line in enumerate(lines):
+        if line.startswith(RULE_HEADER):
+            last = i + 1                       # the separator line
+            j = i + 2
+            while j < len(lines) and lines[j].startswith("|"):
+                last = j
+                j += 1
+            return i, last
+    return None
+
+
+def show_rules(path: Path, out) -> None:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    bounds = _rule_table(lines)
+    if bounds is None:
+        out("(no rules table found in " + str(path) + ")")
+        return
+    header, last = bounds
+    out("\n".join(lines[header:last + 1]))
+
+
+def add_rule(path: Path, row: dict, ask, out) -> None:
+    """Ask for one rule and append it as a row. Existing rows are never edited or removed."""
+
+    def field(prompt, parse):
+        while True:
+            text = ask(f"  {prompt} (x cancels): ").strip()
+            if text.lower() == "q":
+                raise Quit()
+            if text.lower() == "x":
+                return CANCELLED
+            value = parse(text)
+            if value is None:
+                out(f"  not valid: {text!r}")
+                continue
+            return value
+
+    def no_bar(text):
+        return text if "|" not in text else None
+
+    pattern = field("Pattern", lambda t: t if t and "|" not in t else None)
+    if pattern is CANCELLED:
+        out("rule cancelled")
+        return
+    label_value = field("Label [h hack / n not a hack / u unsure]", lambda t: LABEL_KEYS.get(t.lower()))
+    if label_value is CANCELLED:
+        out("rule cancelled")
+        return
+    hack_type = field("Hack type [1-5, comma-separated, or - for none]",
+                      lambda t: "" if t == "-" else parse_hack_types(t))
+    if hack_type is CANCELLED:
+        out("rule cancelled")
+        return
+    clar = field("Clarification class [1 i, 2 ii, 3 iii, 0 not a clarification]", parse_class)
+    if clar is CANCELLED:
+        out("rule cancelled")
+        return
+    note = field("Note to write (may be empty)", no_bar)
+    if note is CANCELLED:
+        out("rule cancelled")
+        return
+
+    lines = path.read_text(encoding="utf-8").splitlines()
+    bounds = _rule_table(lines)
+    if bounds is None:
+        out(f"no rules table in {path}; nothing added")
+        return
+    header, last = bounds
+    numbers = [int(line.split("|")[1].strip()) for line in lines[header + 2:last + 1]
+               if line.split("|")[1].strip().isdigit()]
+    number = max(numbers, default=0) + 1
+    cells = [str(number), pattern, label_value,
+             hack_type.replace(";", ", ") or "–", clar, note, row["episode_id"],
+             datetime.date.today().isoformat()]
+    lines.insert(last + 1, "| " + " | ".join(cells) + " |")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    out(f"rule {number} added to {path.name}")
+
+
 # ── the labelling session ───────────────────────────────────────────────────
 
-def ask_step(step: str, row: dict, ask, out, details=lambda: "(no details)"):
+def ask_step(step: str, row: dict, ask, out, hooks=None):
     """Ask one question. Returns ("value", v) or ("back", None). Raises Quit on q."""
     current = row.get(step, "")
     shown = f" (now: {current})" if current else ""
+    hooks = hooks or {}
     while True:
         text = ask(f"{PROMPTS[step]}{shown}: ").strip()
         low = text.lower()
@@ -279,7 +371,15 @@ def ask_step(step: str, row: dict, ask, out, details=lambda: "(no details)"):
             out("")
             continue
         if low == "v":
-            out(details())
+            out(hooks["v"]() if "v" in hooks else "(not available here)")
+            continue
+        if text == "R":
+            if "R" in hooks:
+                hooks["R"]()
+            continue
+        if low == "r":
+            if "r" in hooks:
+                hooks["r"]()
             continue
         if step == "note":
             if text == "":
@@ -309,7 +409,8 @@ def ask_step(step: str, row: dict, ask, out, details=lambda: "(no details)"):
         return ("value", value)
 
 
-def label_rows(rows: list[dict], start: int, save, ask, out, details_for=lambda row: "") -> None:
+def label_rows(rows: list[dict], start: int, save, ask, out, details_for=lambda row: "",
+               decisions=None) -> None:
     idx = start
     total = len(rows)
     suggested = False
@@ -317,6 +418,10 @@ def label_rows(rows: list[dict], start: int, save, ask, out, details_for=lambda 
         row = rows[idx]
         snapshot = dict(row)   # restored if the labeller quits part-way through this row
         out(render(row, idx, total))
+        hooks = {"v": lambda r=row: details_for(r)}
+        if decisions is not None:
+            hooks["r"] = lambda r=row: add_rule(decisions, r, ask, out)
+            hooks["R"] = lambda: show_rules(decisions, out)
         step_i = 0
         back = False
         try:
@@ -326,7 +431,7 @@ def label_rows(rows: list[dict], start: int, save, ask, out, details_for=lambda 
                     row["hack_type"] = ""          # not a hack: no hack type
                     step_i += 1
                     continue
-                kind, value = ask_step(step, row, ask, out, details=lambda r=row: details_for(r))
+                kind, value = ask_step(step, row, ask, out, hooks=hooks)
                 if kind == "back":
                     back = True
                     break
@@ -354,7 +459,8 @@ def label_rows(rows: list[dict], start: int, save, ask, out, details_for=lambda 
 
 
 def run(to_label: Path, labeled: Path, ask=input, out=print,
-        runs_dir: Path = RUNS_DIR, fixture_path: Path = FIXTURE_PATH) -> int:
+        runs_dir: Path = RUNS_DIR, fixture_path: Path = FIXTURE_PATH,
+        decisions_path: Path = DECISIONS_PATH) -> int:
     rows = load_rows(to_label, labeled)
     start = first_unlabelled(rows)
     fixture = json.loads(Path(fixture_path).read_text(encoding="utf-8"))
@@ -369,7 +475,7 @@ def run(to_label: Path, labeled: Path, ask=input, out=print,
     save(rows)
     out(f"{len(rows)} rows; starting at row {start + 1}. Commands: b back, g guide, q save and quit.")
     try:
-        label_rows(rows, start, save, ask, out, details_for)
+        label_rows(rows, start, save, ask, out, details_for, decisions=decisions_path)
     except (Quit, EOFError):
         out("Saved. Run the same command again to resume.")
     return 0
@@ -382,8 +488,10 @@ def main(argv=None) -> int:
     parser.add_argument("--labeled", type=Path, default=LABELED)
     parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
     parser.add_argument("--fixture", type=Path, default=FIXTURE_PATH)
+    parser.add_argument("--decisions", type=Path, default=DECISIONS_PATH)
     args = parser.parse_args(argv)
-    return run(args.to_label, args.labeled, runs_dir=args.runs_dir, fixture_path=args.fixture)
+    return run(args.to_label, args.labeled, runs_dir=args.runs_dir, fixture_path=args.fixture,
+               decisions_path=args.decisions)
 
 
 if __name__ == "__main__":

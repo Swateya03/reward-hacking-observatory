@@ -1,6 +1,7 @@
 """scripts/label.py on a fake sheet in a temporary folder. Never touches labels/."""
 
 import csv
+import datetime
 import importlib.util
 import json
 import re
@@ -310,3 +311,98 @@ def test_v_at_a_prompt_shows_the_details_and_asks_again(tmp_path):
 def test_v_says_so_when_the_episode_has_no_stored_record(tmp_path):
     text = label.details_text(None, "x", {"emails": [], "files": [], "events": []})
     assert "no stored record" in text
+
+
+# ── the r (add rule) and R (show rules) commands ────────────────────────────
+
+REAL_DECISIONS = Path(__file__).resolve().parents[1] / "docs" / "LABELING_DECISIONS.md"
+
+
+def rules_copy(tmp_path: Path) -> Path:
+    """A temporary copy of the real template. Tests only ever write to this copy."""
+    path = tmp_path / "LABELING_DECISIONS.md"
+    path.write_text(REAL_DECISIONS.read_text(encoding="utf-8"), encoding="utf-8")
+    return path
+
+
+def run_with_rules(tmp_path, n, answers, decisions):
+    to_label = make_sheet(tmp_path / "to_label.csv", n)
+    labeled = tmp_path / "labeled.csv"
+    out_lines = []
+    label.run(to_label, labeled, ask=scripted(answers), out=out_lines.append,
+              runs_dir=tmp_path / "no_runs", fixture_path=fake_fixture(tmp_path),
+              decisions_path=decisions)
+    return labeled, "\n".join(out_lines)
+
+
+def table_rows(path: Path):
+    return [line for line in path.read_text(encoding="utf-8").splitlines() if line.startswith("|")]
+
+
+def test_r_appends_a_row_with_episode_and_today(tmp_path):
+    decisions = rules_copy(tmp_path)
+    before = decisions.read_text(encoding="utf-8").splitlines()
+    real_before = REAL_DECISIONS.read_text(encoding="utf-8")
+    answers = (["r", "Test pattern", "n", "-", "0", "a note"]   # the rule
+               + ["n", "0", "n", ""])                           # the row's own labels
+    labeled, _ = run_with_rules(tmp_path, 1, answers, decisions)
+    after = decisions.read_text(encoding="utf-8").splitlines()
+    today = datetime.date.today().isoformat()
+    new = [line for line in after if line not in before]
+    assert new == [f"| 1 | Test pattern | not a hack | – | not a clarification | a note | run_01/task_001 | {today} |"]
+    assert all(line in after for line in before)                          # existing rows unchanged
+    assert REAL_DECISIONS.read_text(encoding="utf-8") == real_before        # the real file untouched
+    assert read(labeled)[0]["label"] == "not a hack"                      # the row was still labelled
+
+
+def test_r_numbers_rules_and_never_changes_existing_rows(tmp_path):
+    decisions = rules_copy(tmp_path)
+    before = decisions.read_text(encoding="utf-8").splitlines()
+    answers = (["r", "First", "h", "2", "2", "note one"]
+               + ["r", "Second", "n", "-", "0", ""]
+               + ["n", "0", "n", ""])
+    run_with_rules(tmp_path, 1, answers, decisions)
+    rows = table_rows(decisions)
+    numbers = [r.split("|")[1].strip() for r in rows[2:]]        # skip header and separator
+    assert numbers == ["EXAMPLE – delete when you add your first rule", "1", "2"]
+    cells = lambda row: [c.strip() for c in row.split("|")]     # cells[0] is the text before the first bar
+    assert cells(rows[-2])[3] == "hack" and cells(rows[-2])[4] == "scope_creep"
+    assert cells(rows[-2])[5] == "ii"
+    assert cells(rows[-1])[3] == "not a hack"
+    after = decisions.read_text(encoding="utf-8").splitlines()
+    assert all(line in after for line in before)                 # no existing line lost or changed
+
+
+def test_r_cancel_adds_nothing(tmp_path):
+    decisions = rules_copy(tmp_path)
+    before = decisions.read_text(encoding="utf-8")
+    labeled, text = run_with_rules(tmp_path, 1, ["r", "x", "n", "0", "n", ""], decisions)
+    assert decisions.read_text(encoding="utf-8") == before
+    assert "rule cancelled" in text
+
+
+def test_r_rejects_a_bar_and_an_unknown_label(tmp_path):
+    decisions = rules_copy(tmp_path)
+    answers = (["r", "a|b", "ok pattern", "zz", "n", "-", "0", "no|bar", ""]
+               + ["n", "0", "n", ""])
+    labeled, text = run_with_rules(tmp_path, 1, answers, decisions)
+    assert text.count("not valid") == 3
+    rows = table_rows(decisions)
+    assert any("| ok pattern |" in r for r in rows)
+    assert not any("a|b" in r or "no|bar" in r for r in rows)
+
+
+def test_R_prints_the_table_then_asks_again(tmp_path):
+    decisions = rules_copy(tmp_path)
+    labeled, text = run_with_rules(tmp_path, 1, ["R", "n", "0", "n", ""], decisions)
+    assert "| # | Pattern | Label | Hack type | Clarification class | Note to write |" in text
+    assert "EXAMPLE – delete when you add your first rule" in text
+    assert read(labeled)[0]["label"] == "not a hack"          # the next answer was still the label
+
+
+def test_R_with_no_table_says_so(tmp_path):
+    empty = tmp_path / "no_table.md"
+    empty.write_text("# nothing here\n", encoding="utf-8")
+    out_lines = []
+    label.show_rules(empty, out_lines.append)
+    assert "no rules table" in out_lines[0]
