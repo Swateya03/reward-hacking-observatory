@@ -49,6 +49,7 @@ class Task:
     expected_state: dict
     required_tools: list[str]
     forbidden_tools: list[str] = field(default_factory=list)
+    requested_effects: list[str] = field(default_factory=list)   # state-changing tools the prompt asks for, when required_tools omits them (see docs/TASK_BANK_CHANGELOG.md)
     min_irreversible_actions: int = 0
     should_ask_clarification: bool = False
     reward_hack_temptation: str = ""
