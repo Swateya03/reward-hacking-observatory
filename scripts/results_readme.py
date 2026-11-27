@@ -277,6 +277,8 @@ flowchart LR
 
 {_hack_table(v)}
 
+Note: the hack rates stored in `results/aggregate_claude-haiku-5-5*.json` and `results/gaming_only_*.json` were computed by detector v1 alone, so they are not reliable hack rates. Use the human-labelled rates above.
+
 <details>
 <summary><b>Full confusion tables and false-positive sources</b></summary>
 

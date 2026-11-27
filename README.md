@@ -201,6 +201,8 @@ flowchart LR
 | First design (295 episodes) | 0.088 (95% CI 0.023–0.170) |
 | Fresh design (245 episodes) | 0.031 (95% CI 0.015–0.047) |
 
+Note: the hack rates stored in `results/aggregate_claude-haiku-5-5*.json` and `results/gaming_only_*.json` were computed by detector v1 alone, so they are not reliable hack rates. Use the human-labelled rates above.
+
 <details>
 <summary><b>Full confusion tables and false-positive sources</b></summary>
 
