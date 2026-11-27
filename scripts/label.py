@@ -17,6 +17,8 @@ Commands at any question:
   b  go back to the previous row (its answers can be changed; Enter keeps each one)
   g  show the labelling guide for the hack types
   q  save and quit (a row that is only partly answered is not saved)
+  v  view details: the full result of each tool call, and the original fixture items the task
+     refers to (no detector, reward or score fields are shown)
 
 Run from the repository root:
   python scripts/label.py
@@ -24,7 +26,9 @@ Run from the repository root:
 
 import argparse
 import csv
+import json
 import os
+import re
 import sys
 import textwrap
 from pathlib import Path
@@ -33,6 +37,8 @@ REPO = Path(__file__).resolve().parents[1]
 TO_LABEL = REPO / "labels" / "to_label.csv"
 LABELED = REPO / "labels" / "labeled.csv"
 GUIDE = REPO / "docs" / "LABELING_GUIDE.md"
+RUNS_DIR = REPO / "results" / "runs" / "claude-haiku-5-5" / "rescored_v8"
+FIXTURE_PATH = REPO / "workspace" / "fixtures" / "default.json"
 
 COLUMNS = [
     "episode_id", "task_instruction", "tool_calls", "final_state_diff", "final_message",
@@ -156,9 +162,108 @@ def guide_text() -> str:
     return text[start:end].strip()
 
 
+# ── details view (v) ───────────────────────────────────────────────────────
+
+# Field names that belong to the detector or the rewards. They are removed from anything the
+# details view prints. Matched against key names, not against free text: the fixture's spam
+# email legitimately contains the word "reward" in its body.
+FORBIDDEN_KEY = re.compile(
+    r"hack|score|reward|detector|diverg|naive|robust|severity|reversib|scope|closing|"
+    r"raw_type|subtype|verdict|intermediate|policy|metric", re.IGNORECASE)
+ID_RE = re.compile(r"\b(?:file|email|event)_\d{3}\b")
+EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+PATH_RE = re.compile(r"/[\w./-]*\w")
+FOLDER_WORDS = ("inbox", "trash", "sent", "drafts", "spam", "archive")
+EMAIL_LABELS = {"sender": "from", "recipient": "to"}
+
+
+def sanitize(obj):
+    """Copy of obj with every dict key that names a detector, reward or score field removed."""
+    if isinstance(obj, dict):
+        return {k: sanitize(v) for k, v in obj.items() if not FORBIDDEN_KEY.search(str(k))}
+    if isinstance(obj, list):
+        return [sanitize(v) for v in obj]
+    return obj
+
+
+def load_record(runs_dir: Path, episode_id: str):
+    run, task = episode_id.split("/")
+    path = Path(runs_dir) / run / f"{task}.json"
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def tool_calls(record: dict):
+    """(tool, arguments, result) for each tool call in the stored trajectory, in order."""
+    for step in record.get("trajectory", []):
+        if step.get("type") == "tool_call":
+            yield step.get("tool"), step.get("arguments") or {}, step.get("result")
+
+
+def referenced_fixture_items(fixture: dict, instruction: str, record: dict) -> list:
+    """Fixture items the task refers to: named by id in the agent's tool arguments, or matched by
+    an address, path, folder word or event title in the task instruction."""
+    ids = set()
+    for _, args, _ in tool_calls(record):
+        ids.update(ID_RE.findall(json.dumps(args, ensure_ascii=False)))
+    low = instruction.lower()
+    addresses = set(EMAIL_RE.findall(instruction))
+    paths = set(PATH_RE.findall(instruction))
+    words = {w for w in FOLDER_WORDS if re.search(rf"\b{w}\b", low)}
+    picked = []
+    for kind in ("emails", "files", "events"):
+        for item in fixture.get(kind, []):
+            title = (item.get("title") or "").lower()
+            hit = (
+                item["id"] in ids
+                or (kind == "emails" and (item.get("sender") in addresses
+                                          or item.get("recipient") in addresses
+                                          or item.get("folder") in words))
+                or (kind == "files" and (item.get("folder") in paths
+                                         or item.get("path") in paths
+                                         or item.get("folder") in words
+                                         or any(item.get("path", "").startswith(p.rstrip("/") + "/")
+                                                for p in paths)))
+                or (kind == "events" and bool(title) and title in low)
+            )
+            if hit:
+                picked.append((kind, item))
+    return picked
+
+
+def details_text(record, instruction: str, fixture: dict) -> str:
+    if record is None:
+        return "(no stored record for this episode)"
+    bar = "=" * WIDTH
+    out = ["", bar, "DETAILS: stored tool results and the original fixture items", bar, "",
+           "TOOL RESULTS"]
+    n = 0
+    for tool, args, result in tool_calls(record):
+        n += 1
+        out.append(f"[{n}] {tool}({json.dumps(args, ensure_ascii=False)})")
+        body = (json.dumps(sanitize(result), indent=2, ensure_ascii=False)
+                if result is not None else "(no result)")
+        out.extend("    " + line for line in body.splitlines())
+    if n == 0:
+        out.append("  (no tool calls)")
+    out += ["", "ORIGINAL FIXTURE ITEMS THE TASK REFERS TO (before the episode)"]
+    items = referenced_fixture_items(fixture, instruction, record)
+    if not items:
+        out.append("  (none matched by name or id)")
+    for kind, item in items:
+        out.append(f"  {kind[:-1]} {item['id']}:")
+        for key, value in sanitize(item).items():
+            if key == "id":
+                continue
+            label = EMAIL_LABELS.get(key, key) if kind == "emails" else key
+            out.append(f"    {label}: {value}")
+    return "\n".join(out) + "\n"
+
+
 # ── the labelling session ───────────────────────────────────────────────────
 
-def ask_step(step: str, row: dict, ask, out):
+def ask_step(step: str, row: dict, ask, out, details=lambda: "(no details)"):
     """Ask one question. Returns ("value", v) or ("back", None). Raises Quit on q."""
     current = row.get(step, "")
     shown = f" (now: {current})" if current else ""
@@ -172,6 +277,9 @@ def ask_step(step: str, row: dict, ask, out):
         if low == "g":
             out(guide_text())
             out("")
+            continue
+        if low == "v":
+            out(details())
             continue
         if step == "note":
             if text == "":
@@ -201,7 +309,7 @@ def ask_step(step: str, row: dict, ask, out):
         return ("value", value)
 
 
-def label_rows(rows: list[dict], start: int, save, ask, out) -> None:
+def label_rows(rows: list[dict], start: int, save, ask, out, details_for=lambda row: "") -> None:
     idx = start
     total = len(rows)
     suggested = False
@@ -218,7 +326,7 @@ def label_rows(rows: list[dict], start: int, save, ask, out) -> None:
                     row["hack_type"] = ""          # not a hack: no hack type
                     step_i += 1
                     continue
-                kind, value = ask_step(step, row, ask, out)
+                kind, value = ask_step(step, row, ask, out, details=lambda r=row: details_for(r))
                 if kind == "back":
                     back = True
                     break
@@ -245,9 +353,15 @@ def label_rows(rows: list[dict], start: int, save, ask, out) -> None:
     out("All rows labelled. Labels are in labels/labeled.csv.")
 
 
-def run(to_label: Path, labeled: Path, ask=input, out=print) -> int:
+def run(to_label: Path, labeled: Path, ask=input, out=print,
+        runs_dir: Path = RUNS_DIR, fixture_path: Path = FIXTURE_PATH) -> int:
     rows = load_rows(to_label, labeled)
     start = first_unlabelled(rows)
+    fixture = json.loads(Path(fixture_path).read_text(encoding="utf-8"))
+
+    def details_for(row):
+        return details_text(load_record(runs_dir, row["episode_id"]),
+                            row["task_instruction"], fixture)
 
     def save(rs):
         write_csv(labeled, rs)
@@ -255,7 +369,7 @@ def run(to_label: Path, labeled: Path, ask=input, out=print) -> int:
     save(rows)
     out(f"{len(rows)} rows; starting at row {start + 1}. Commands: b back, g guide, q save and quit.")
     try:
-        label_rows(rows, start, save, ask, out)
+        label_rows(rows, start, save, ask, out, details_for)
     except (Quit, EOFError):
         out("Saved. Run the same command again to resume.")
     return 0
@@ -266,8 +380,10 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--to-label", type=Path, default=TO_LABEL)
     parser.add_argument("--labeled", type=Path, default=LABELED)
+    parser.add_argument("--runs-dir", type=Path, default=RUNS_DIR)
+    parser.add_argument("--fixture", type=Path, default=FIXTURE_PATH)
     args = parser.parse_args(argv)
-    return run(args.to_label, args.labeled)
+    return run(args.to_label, args.labeled, runs_dir=args.runs_dir, fixture_path=args.fixture)
 
 
 if __name__ == "__main__":
