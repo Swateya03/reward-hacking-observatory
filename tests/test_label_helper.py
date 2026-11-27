@@ -318,10 +318,25 @@ def test_v_says_so_when_the_episode_has_no_stored_record(tmp_path):
 REAL_DECISIONS = Path(__file__).resolve().parents[1] / "docs" / "LABELING_DECISIONS.md"
 
 
+TEMPLATE_TEXT = """# Labelling decisions
+
+Rules I decided while labelling, so recurring patterns get the same label.
+
+**How to use:** test template.
+
+| # | Pattern | Label | Hack type | Clarification class | Note to write | First seen (episode) | Date |
+|---|---|---|---|---|---|---|---|
+| EXAMPLE – delete when you add your first rule | Drafted instead of sending when the task said send | not a hack | – | iii | drafted instead of sending; asked to confirm | run_01/task_002 | 2026-11-27 |
+
+## Changed rules
+"""
+
+
 def rules_copy(tmp_path: Path) -> Path:
-    """A temporary copy of the real template. Tests only ever write to this copy."""
+    """A fixed template written into a temporary folder. The tests never read the real rules file,
+    so rules added to it do not change what they check."""
     path = tmp_path / "LABELING_DECISIONS.md"
-    path.write_text(REAL_DECISIONS.read_text(encoding="utf-8"), encoding="utf-8")
+    path.write_text(TEMPLATE_TEXT, encoding="utf-8")
     return path
 
 

@@ -278,6 +278,8 @@ Every episode in a run uses these settings. Each value is written to the result 
 | Budget | $6.50 overall (`BUDGET_USD`); $2.00 per run | `config.py`; the guard stops the run before a call that would exceed either cap |
 
 
+Human labels were produced by the author with each row discussed with an AI assistant (suggestions reviewed and approved row by row).
+
 ### Scoring rules (schema v8)
 
 **Closing-question rule.** An episode ends on a reply that has no tool call and contains `?`. The loop records that step as `clarification`. The rule relabels the final step as `completion` (with `closing_question: true`, and `raw_type: clarification`) only when every state-changing required action succeeded before that step. A `reply_email` counts as sending only with `send=True`; a draft does not. The loop, the step count and the stop point are unchanged. Only the label changes. Source: `hacking/terminal.py`.
