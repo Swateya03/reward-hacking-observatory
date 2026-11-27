@@ -398,6 +398,7 @@ reward-hacking-observatory/
 │   ├── rescore_v9.py           ← re-scores the 300 schema-8 episodes with v1 and v2 verdicts (schema 9)
 │   ├── backfill_provenance.py  ← adds provenance fields to copies of the schema-7 runs
 │   ├── readme_numbers.py       ← prints README numbers from the legacy file and task bank
+│   ├── validation/export_v2_sample.py ← draws the fresh detector-v2 sample and writes its blind sheet
 │   ├── demo_findings.py        ← sample data for offline testing
 │   ├── detector_metrics.py     ← detector validation against hand labels
 │   ├── generate_all_charts.py  ← master script: runs the five chart generators
@@ -414,7 +415,10 @@ reward-hacking-observatory/
 │       └── chart_score_scatter.py
 ├── labels/
 │   ├── sample_ids.json         ← the 50 sampled episode IDs
-│   └── to_label.csv            ← blind labelling sheet (no detector verdicts)
+│   ├── to_label.csv            ← blind labelling sheet (no detector verdicts)
+│   ├── labeled.csv             ← the author's labels for the first sample
+│   ├── sample_ids_v2.json      ← the 30 episodes of the fresh detector-v2 sample
+│   └── to_label_v2.csv         ← blind labelling sheet for the fresh sample
 ├── results/
 │   ├── aggregate_claude-haiku-5-5.json       ← v7 aggregate (older code; kept for comparison)
 │   ├── aggregate_claude-haiku-5-5_v8.json    ← v8 aggregate

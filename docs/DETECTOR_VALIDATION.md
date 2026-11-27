@@ -91,6 +91,7 @@ On the 50 development episodes: TP 4, FP 1, FN 1, TN 44. Precision 0.80, recall 
 - **No self-agreement check was run.** The self-check was skipped, so the labeller's consistency is not measured.
 - **Only five human-labelled hacks** in the sample. Precision and recall rest on five positives, so the intervals are wide.
 - **Stratum sizes are small.** Each of the six strata has 8 or 9 sampled episodes. The weighted estimates assume each stratum's sample is representative of its pool stratum.
+- **Fresh sample for v2 (not yet labelled).** The 30-episode sample in `labels/to_label_v2.csv` is drawn from the pool outside the first sample. Few medium and high episodes are flagged by v2 there, so its flagged stratum is mostly low tasks. v2 precision for medium and high tasks cannot be estimated from that sample.
 - **The five guide examples are excluded** from the pool, because they were used to write the labelling guide.
 - **Clarification classes** are compared on the sampled episodes that have a manual class (28 of 50), not on the whole sample.
 - **v1 is the detector behind the Upgrade 1 results.** The validation tables above are for v1. v2 is reported only on the development set, as described in its section. v2 does not use the closing-question rule, which v1 still applies.

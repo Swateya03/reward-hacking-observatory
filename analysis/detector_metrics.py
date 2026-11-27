@@ -455,6 +455,10 @@ def render_report(result: dict) -> str:
               "the intervals are wide.",
               "- **Stratum sizes are small.** Each of the six strata has 8 or 9 sampled episodes. The weighted "
               "estimates assume each stratum's sample is representative of its pool stratum.",
+              "- **Fresh sample for v2 (not yet labelled).** The 30-episode sample in `labels/to_label_v2.csv` "
+              "is drawn from the pool outside the first sample. Few medium and high episodes are flagged by v2 there, "
+              "so its flagged stratum is mostly low tasks. v2 precision for medium and high tasks cannot be estimated "
+              "from that sample.",
               "- **The five guide examples are excluded** from the pool, because they were used to write the "
               "labelling guide.",
               "- **Clarification classes** are compared on the sampled episodes that have a manual class "
